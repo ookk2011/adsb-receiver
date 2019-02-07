@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #####################################################################################
-#                                   ADS-B RECEIVER                                  #
+#                            THE ADS-B RECEIVER PROJECT                             #
 #####################################################################################
 #                                                                                   #
 #  A set of scripts created to automate the process of installing the software      #
@@ -12,7 +12,7 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                                                                                   #
-# Copyright (c) 2015-2016 Joseph A. Prochazka                                       #
+# Copyright (c) 2015-2019 Joseph A. Prochazka                                       #
 #                                                                                   #
 # Permission is hereby granted, free of charge, to any person obtaining a copy      #
 # of this software and associated documentation files (the "Software"), to deal     #
@@ -34,186 +34,226 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-## VARIABLES
+## EXPORT VARIABLES
 
-AUTOMATED_INSTALL="false"
-PROJECT_BRANCH="master"
-CONFIGURATION_FILE="default"
-ENABLE_LOGGING="false"
+# PuTTY does not display dialog borders properly when the locale is set to UTF-8. (This fixes the issue.)
+export NCURSES_NO_UTF8_ACS=1
 
-export RECEIVER_ROOT_DIRECTORY="${PWD}"
-export RECEIVER_BASH_DIRECTORY="${PWD}/bash"
-export RECEIVER_BUILD_DIRECTORY="${PWD}/build"
-export RECEIVER_OS_DISTRIBUTION=`. /etc/os-release; echo ${ID/*, /}`
-export RECEIVER_OS_RELEASE=`. /etc/os-release; echo ${VERSION_ID/*, /}`
+export PROJECT_THIS_VERSION='3.0.0'
+export PROJECT_BRANCH='3.0'
+export PROJECT_ROOT_DIRECTORY="$PWD"
+export PROJECT_BASH_DIRECTORY="${PWD}/bash"
+export PROJECT_BUILD_DIRECTORY="${PWD}/build"
+
+export COLOR_BLUE='\e[0;34m'
+export COLOR_GREEN='\e[0;32m'
+export COLOR_LIGHT_BLUE='\e[1;34m'
+export COLOR_LIGHT_GRAY='\e[0;37m'
+export COLOR_LIGHT_GREEN='\e[1;32m'
+export COLOR_RED='\e[0;31m'
+export COLOR_YELLOW='\e[1;33m'
 
 ## SOURCE EXTERNAL SCRIPTS
 
-source ${RECEIVER_BASH_DIRECTORY}/functions.sh
+source ${PROJECT_BASH_DIRECTORY}/functions.sh
+
+## DISPLAY PROJECT TITLE AND VERSION
+
+echo -e "\n${COLOR_LIGHT_GREEN}-----------------------------------"
+echo -e " THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} "
+echo -e "${COLOR_LIGHT_GREEN}-----------------------------------\n"
+
+## CHECK FOR REQUIRED PACKAGES
+
+# Make sure that the packages needed in order fot the scripts to run properly are installed first.
+echo -e "${COLOR_LIGHT_BLUE}Checking for required packages.${COLOR_LIGHT_GRAY}\n"
+
+# Check if apt update was ran successfully within the last hour or if the user specified the command should be ran.
+if [ `stat -c %Y /var/cache/apt/pkgcache.bin` -lt $((`date +%s` - 3600)) ] || [ ! -z $FORCE_APT_UPDATE ] && [ "$FORCE_APT_UPDATE" == 'true' ] ; then
+    # Run the apt update command.
+    echo -e "${COLOR_BLUE}Updating apt package lists...${COLOR_LIGHT_GRAY}\n"
+    sudo apt update
+    echo ''
+fi
+
+if [ ! -z $EXECUTE_APT_UPGRADE ] && [ "$EXECUTE_APT_UPGRADE" == 'true' ] ; then
+    # Run the apt upgrade command.
+    echo -e "${COLOR_BLUE}Upgrading your system using apt...${COLOR_LIGHT_GRAY}\n"
+    sudo apt -y upgrade
+    echo ''
+fi
+
+# Check that any required packages are installed and if not install them.
+CheckPackage bc
+CheckPackage curl
+CheckPackage dialog
+CheckPackage git
+
+## EXPORT REMAINING VARIABLES
+
+# Variables get the current release version number from the Internet if possible..
+export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/latest.txt)" || ADSB_RECIEVER_CURRENT_VERSION='NA'
+
+# Variables pertaining to the installed operating system.
+export OS_DISTRIBUTION=`. /etc/os-release; echo ${ID/*, /}`
+export OS_RELEASE=`. /etc/os-release; echo ${VERSION_ID/*, /}`
 
 ## FUNCTIONS
 
-# Display the help message.
+# This function displays the --help message.
 function DisplayHelp() {
-    echo ""
-    echo "Usage: $0 [OPTIONS] [ARGUMENTS]"
-    echo ""
-    echo "Option        GNU long option        Meaning"
-    echo "-a            --automated-install    Use a configuration file to automate the install process somewhat."
-    echo "-b <BRANCH>   --branch=<BRANCH>      Specifies the repository branch to be used."
-    echo "-c <FILE>     --config-file=<FILE>   The configuration file to be use for an unattended installation."
-    echo "-d            --development          Skips local repository update so changes are not overwrote."
-    echo "-h            --help                 Shows this message."
-    echo "-l            --log-output           Logs all output to a file in the logs directory."
-    echo "-m <MTA>      --mta=<MTA>            Specify which email MTA to use currently Exim or Postfix."
-    echo "-u            --apt-update           Forces the apt update command to be ran."
-    echo "-v            --verbose              Provides extra confirmation at each stage of the install."
-    echo ""
+    echo "Usage: ${0} [OPTIONS] [ARGUMENTS]\n"
+    echo ''
+    echo 'Option        GNU long option        Meaning'
+    echo '-a            --apt-update           Forces the apt update command to be ran.\n'
+    echo '-b <BRANCH>   --branch=<BRANCH>      Specifies the repository branch to be used.'
+    echo '-h            --help                 Shows this message.'
+    echo '-u            --apt-upgrade          Executes the apt upgrade command during setup.'
 }
 
-## CHECK FOR OPTIONS AND ARGUMENTS
+## HANDLE ARGUMENTS
 
-while [[ $# -gt 0 ]] ; do
+while [ $# -gt 0 ] ; do
     case "$1" in
-        -h|--help)
-            # Display a help message.
-            DisplayHelp
-            exit 0
-            ;;
-        -a|--automated-install)
-            # Automated install.
-            AUTOMATED_INSTALL="true"
+
+        # Force the execution of the apt update command.
+        -a|--apt-update)
+            FORCE_APT_UPDATE='true'
             shift 1
             ;;
+
+        # Use a branch other than the master branch.
         -b)
-            # The specified branch of github.
+            ORIGINAL_BRANCH=$PROJECT_BRANCH
             PROJECT_BRANCH="$2"
             shift 2
             ;;
         --branch*)
-            # The specified branch of github.
+            ORIGINAL_BRANCH=$PROJECT_BRANCH
             PROJECT_BRANCH=`echo $1 | sed -e 's/^[^=]*=//g'`
             shift 1
             ;;
-        -c)
-            # The specified installation configuration file.
-            CONFIGURATION_FILE="$2"
-            shift 2
-            ;;
-        --config-file*)
-            # The specified installation configuration file.
-            CONFIGURATION_FILE=`echo $1 | sed -e 's/^[^=]*=//g'`
-            shift 1
-            ;;
-        -d|--development)
-            # Skip adsb-receiver repository update.
-            DEVELOPMENT_MODE="true"
-            shift 1
-            ;;
-        -l|--log-output)
-            # Enable logging to a file in the logs directory.
-            ENABLE_LOGGING="true"
-            shift 1
-            ;;
-        -m)
-           # The MTA to use.
-            MTA=${2^^}
-            if [ $MTA != "EXIM" ] && [ $MTA != "POSTFIX" ]; then
-                echo "MTA can only be either EXIM or POSTFIX."
-                exit 1
-            fi
-            shift 2
-            ;;
-        --mta*)
-            MTA=`echo ${1^^} | sed -e 's/^[^=]*=//g'`
-            if [ $MTA != "EXIM" ] && [ $MTA != "POSTFIX" ]; then
-                echo "MTA can only be either EXIM or POSTFIX."
-                exit 1
-            fi
-            shift 1
-            ;;
-        -u|--apt-update)
-            # Force apt update.
-            FORCE_APT_UPDATE="true"
-            shift 1
-            ;;
-        -v|--verbose)
-            # Provides extra confirmation at each stage of the install.
-            VERBOSE="true"
-            shift 1
-            ;;
-        *)
-            # Unknown options were set so exit.
-            echo -e "Error: Unknown option: $1" >&2
+
+        # Display the help message and exit.
+        -h|--help)
             DisplayHelp
-            exit 1
+            exit 0
             ;;
+
+        # Execute the apt upgrade command.
+        -u|--apt-upgrade)
+            EXECUTE_APT_UPGRADE='true'
+            shift 1
+            ;;
+
     esac
 done
 
-## AUTOMATED INSTALL
+exit 0
 
-# If the automated installation option was selected set the needed environmental variables.
-if [[ "${AUTOMATED_INSTALL}" = "true" ]] ; then
-    # If no configuration file was specified use the default configuration file path and name.
-    if [[ -n "${CONFIGURATION_FILE}" ]] || [[ "${CONFIGURATION_FILE}" = "default" ]] ; then
-        CONFIGURATION_FILE="${RECEIVER_ROOT_DIRECTORY}/install.config"
-    # If either the -c or --config-file= flags were set a valid file must reside there.
-    elif [[ ! -f "${CONFIGURATION_FILE}" ]] ; then
-        echo "Unable to locate the installation configuration file."
-        exit 1
+## PREPARE REPOSITORY
+
+# Checkout the repository branch to be used if it has not already been checked out.
+$CURRENT_BRANCH=`git branch | grep \* | cut -d ' ' -f2`
+if [ "$PROJECT_BRANCH" != "$CURRENT_BRANCH" ] ; then
+    echo -e "\n${COLOR_YELLOW}NOTICE: Currently using the branch \"${CURRENT_BRANCH}\" and not the \"${PROJECT_BRANCH}\" branch."
+    echo -e "${COLOR_LIGHT_BLUE}Checking out the branch \"${PROJECT_BRANCH}\"."
+    echo -e "${COLOR_BLUE}Stashing files which have been changed...${COLOR_LIGHT_GRAY}\n"
+    git stash
+    echo -e "\n${COLOR_BLUE}Checking out the branch ${PROJECT_BRANCH}...${COLOR_LIGHT_GRAY}\n"
+    git checkout $PROJECT_BRANCH
+    echo -e "\n${COLOR_YELLOW}NOTICE: The branch named \"${PROJECT_BRANCH}\" has been checked out."
+    echo -e '        Setup will now exit to ensure you are running the latest version of this script.\n'
+    echo -e "        Please restart setup using the following command.${COLOR_LIGHT_GRAY}\n"
+    if [ -z $ORIGINAL_BRANCH ] && [ "$ORIGINAL_BRANCH" == "$PROJECT_BRANCH" ] ; then
+        echo './install\n'
+    else
+        echo "./install -b $PROJECT_BRANCH\n"
     fi
-fi
-
-# Add any environmental variables needed by any child scripts.
-export RECEIVER_AUTOMATED_INSTALL=${AUTOMATED_INSTALL}
-export RECEIVER_PROJECT_BRANCH=${PROJECT_BRANCH}
-export RECEIVER_CONFIGURATION_FILE=${CONFIGURATION_FILE}
-export RECEIVER_MTA=${MTA}
-export RECEIVER_FORCE_APT_UPDATE=$FORCE_APT_UPDATE
-export RECEIVER_VERBOSE=${VERBOSE}
-
-## EXECUTE BASH/INIT.SH
-
-chmod +x ${RECEIVER_BASH_DIRECTORY}/init.sh
-if [[ -n "${ENABLE_LOGGING}" ]] && [[ "${ENABLE_LOGGING}" = "true" ]] ; then
-    # Execute init.sh logging all output to the log drectory as the file name specified.
-    LOG_FILE="${RECEIVER_ROOT_DIRECTORY}/logs/install_$(date +"%m_%d_%Y_%H_%M_%S").log"
-    ${RECEIVER_BASH_DIRECTORY}/init.sh 2>&1 | tee -a "${LOG_FILE}"
-    echo -e "\e[95m  Cleaning up log file...\e[97m"
-    CleanLogFile "${LOG_FILE}"
-else
-    # Execute init.sh without logging any output to the log directory.
-    ${RECEIVER_BASH_DIRECTORY}/init.sh
-fi
-
-## CLEAN UP
-
-# Remove any files created by whiptail.
-for WHIPTAIL in FEEDER_CHOICES EXTRAS_CHOICES ; do
-    if [[ -f "${RECEIVER_ROOT_DIRECTORY}/${WHIPTAIL}" ]] ; then
-        rm -f ${RECEIVER_ROOT_DIRECTORY}/${WHIPTAIL}
-    fi
-done
-
-# Remove any global variables assigned by this script.
-unset RECEIVER_ROOT_DIRECTORY
-unset RECEIVER_BASH_DIRECTORY
-unset RECEIVER_BUILD_DIRECTORY
-unset RECEIVER_PROJECT_BRANCH
-unset RECEIVER_AUTOMATED_INSTALL
-unset RECEIVER_CONFIGURATION_FILE
-unset RECEIVER_FORCE_APT_UPDATE
-unset RECEIVER_VERBOSE
-unset RECEIVER_PROJECT_TITLE
-unset RECEIVER_MTA
-unset RECEIVER_OS_DISTRIBUTION
-unset RECEIVER_OS_RELEASE
-
-# Check if any errors were encountered by any child scripts.
-# If no errors were encountered then exit this script cleanly.
-if [[ $? -ne 0 ]] ; then
-    exit 1
-else
     exit 0
 fi
+
+# Check if a newer release is available.
+echo -e "${COLOR_LIGHT_BLUE}Checking if a newer release is available."
+if [ "$RECIEVER_CURRENT_VERSION" != 'NA' ] ; then
+    # Was able to retrieve current version frm the Internet.
+    if [ `bc -l <<< $RECIEVER_CURRENT_VERSION > $RECIEVER_THIS_VERSION` -eq 1 ] ; then
+        # If a newer release is available ask if it should be downloaded.
+        echo -e "${COLOR_YELLOW}NOTICE: A newer release is available.\n"
+        while true
+        do
+            read -r -p "\n${COLOR_LIGHT_BLUE}Would you like to download the latest release? [y/n] ${COLOR_LIGHT_GRAY}" INPUT
+            case "$INPUT" in
+
+                # Update the local repository.
+                [yY][eE][sS]|[yY])
+                    echo -e "${COLOR_BLUE}Updating the repository to match the latest release.${COLOR_LIGHT_GRAY}\n"
+                    if [ `git status | grep -c "untracked files present"` -gt 0 ] ; then
+                        echo -e "${COLOR_YELLOW}NOTICE: Files not mathcing the original files have been detected."
+                        echo -e "${COLOR_BLUE}Branching the repositories current state before fetching the repository...${COLOR_LIGHT_GRAY}"
+                        git commit -a -m "Repositories state before updating to ."
+                        git branch "backup-${CURRENT_BRANCH}-`date '+%Y-%m-%d %H:%M'`"
+                    fi
+
+
+                    git fetch --all
+                    git reset --hard ${PROJECT_BRANCH}
+
+
+                    echo -e "\n${COLOR_YELLOW}NOTICE: The branch named \"${PROJECT_BRANCH}\" has been checked out."
+                    echo '        Setup will now exit to ensure you are running the latest version of this script.\n'
+                    echo -e "        Please restart setup using the following command.${COLOR_LIGHT_GRAY}\n"
+                    if [ -z $ORIGINAL_BRANCH ] && [ "$ORIGINAL_BRANCH" == "$PROJECT_BRANCH" ] ; then
+                        echo './install\n'
+                    else
+                        echo "./install -b $PROJECT_BRANCH\n"
+                    fi
+                    ;;
+
+                # Skip updating the local repository.
+                [nN][oO]|[nN])
+                    echo -e "${COLOR_YELLOW}WARNING: Continuing setup using older release...${COLOR_LIGHT_GRAY}"
+                    ;;
+
+                # The input supplied is invalid.
+                *)
+                    echo "${COLOR_YELLOW}WARNING: Invalid responce...${COLOR_LIGHT_GRAY}"
+                    ;;
+
+            esac
+        done
+    else
+        echo -e "${COLOR_GREEN}NOTICE: You are using the most current version.${COLOR_LIGHT_GRAY}"
+    fi
+else
+    # Unable to determine the latest release.
+    echo -e "${COLOR_YELLOW}WARNING: Unable to retrieve the latest release version.${COLOR_LIGHT_GRAY}"
+fi
+
+
+# Reset the color to the system's default color.
+echo -n -e '\e[?0c'
+
+## UNSET VARIABLES
+
+unset COLOR_BLUE
+unset COLOR_GREEN
+unset COLOR_LIGHT_BLUE
+unset COLOR_LIGHT_GRAY
+unset COLOR_LIGHT_GREEN
+unset COLOR_RED
+unset COLOR_YELLOW
+
+unset NCURSES_NO_UTF8_ACS
+
+unset OS_DISTRIBUTION
+unset OS_RELEASE
+
+unset PROJECT_THIS_VERSION
+unset PROJECT_CURRENT_VERSION
+unset PROJECT_BRANCH
+unset PROJECT_ROOT_DIRECTORY
+unset PROJECT_BASH_DIRECTORY
+unset PROJECT_BUILD_DIRECTORY
+
+exit 0

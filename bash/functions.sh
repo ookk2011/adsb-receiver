@@ -35,46 +35,41 @@
 # Detect if a package is installed and if not attempt to install it.
 
 function CheckPackage {
-    ATTEMPT=1
-    MAXATTEMPTS=5
-    WAITTIME=5
 
-    while (( ${ATTEMPT} -le `(($MAXATTEMPTS + 1))` )); do
+    CURRENT_ATTEMPT=1
+    MAXIMUM_ATTEMPTS=5
+    WAIT_TIME=5
+
+    while [ $CURRENT_ATTEMPT -le $((${MAXIMUM_ATTEMPTS} + 1)) ] ; do
 
         # If the maximum attempts has been reached...
-        if [[ "${ATTEMPT}" -gt "${MAXATTEMPTS}" ]] ; then
-            echo -e ""
-            echo -e "\e[91m  \e[5mINSTALLATION HALTED!\e[25m"
-            echo -e "  UNABLE TO INSTALL A REQUIRED PACKAGE."
-            echo -e "  SETUP HAS BEEN TERMINATED!"
-            echo -e ""
-            echo -e "\e[93mThe package \"$1\" could not be installed in ${MAXATTEMPTS} attempts.\e[39m"
-            echo -e ""
+        if [ $CURRENT_ATTEMPT -gt $MAXIMUM_ATTEMPTS ] ; then
+            echo -e "\n${COLOR_RED}ERROR: Unable to install required software package."
+            echo -e "       Setup has been terminated.${COLOR_LIGHT_GRAY}\n"
             exit 1
         fi
 
         # Check if the package is already installed.
-        printf "\e[94m  Checking if the package $1 is installed..."
-        if [[ $(dpkg-query -W -f='${STATUS}' $1 2>/dev/null | grep -c "ok installed") -eq 0 ]] ; then
+        printf "${COLOR_BLUE}Checking if the package $1 is installed..."
+        if [ $(dpkg-query -W -f='${STATUS}' $1 2>/dev/null | grep -c "ok installed") -eq 0 ] ; then
 
             # If this is not the first attempt at installing this package...
-            if [[ ${ATTEMPT} -gt 1 ]] ; then
-                echo -e "\e[91m  \e[5m[INSTALLATION ATTEMPT FAILED]\e[25m"
-                echo -e "\e[94m  Attempting to Install the package $1 again in ${WAITTIME} seconds (ATTEMPT ${ATTEMPT} OF ${MAXATTEMPTS})..."
-                sleep ${WAITTIME}
+            if [ $CURRENT_ATTEMPT -gt 1 ] ; then
+                echo -e "${COLOR_RED} [FAILED]"
+                echo -e "${COLOR_BLUE}Attempting to Install the package $1 again in ${WAIT_TIME} seconds (ATTEMPT ${CURRENT_ATTEMPT} OF ${MAXIMUM_ATTEMPTS})...${COLOR_LIGHT_GRAY}\n"
+                sleep ${WAIT_TIME}
             else
-                echo -e "\e[91m [NOT INSTALLED]"
-                echo -e "\e[94m  Installing the package $1..."
+                echo -e "${COLOR_YELLOW} [NOT INSTALLED]"
+                echo -e "${COLOR_BLUE}Installing the package $1...${COLOR_LIGHT_GRAY}\n"
             fi
 
             # Attempt to install the required package.
-            echo -e "\e[97m"
-            ATTEMPT=$((ATTEMPT+1))
+            CURRENT_ATTEMPT=$(($CURRENT_ATTEMPT + 1))
             sudo apt-get install -y $1
-            echo -e "\e[39m"
+            echo ''
         else
             # The package appears to be installed.
-            echo -e "\e[92m [OK]\e[39m"
+            echo -e "${COLOR_GREEN} [OK]${COLOR_LIGHT_GRAY}"
             break
         fi
     done
