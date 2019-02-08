@@ -44,12 +44,14 @@ export PROJECT_BRANCH='3.0'
 export PROJECT_ROOT_DIRECTORY="$PWD"
 export PROJECT_BASH_DIRECTORY="${PWD}/bash"
 export PROJECT_BUILD_DIRECTORY="${PWD}/build"
+export PROJECT_TITLE="THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} INSTALLER"
 
 export COLOR_BLUE='\e[0;34m'
 export COLOR_GREEN='\e[0;32m'
 export COLOR_LIGHT_BLUE='\e[1;34m'
 export COLOR_LIGHT_GRAY='\e[0;37m'
 export COLOR_LIGHT_GREEN='\e[1;32m'
+export COLOR_PURPLE='\e[0;35m'
 export COLOR_RED='\e[0;31m'
 export COLOR_YELLOW='\e[1;33m'
 
@@ -59,14 +61,15 @@ source ${PROJECT_BASH_DIRECTORY}/functions.sh
 
 ## DISPLAY PROJECT TITLE AND VERSION
 
-echo -e "\n${COLOR_LIGHT_GREEN}-----------------------------------"
-echo -e " THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} "
-echo -e "${COLOR_LIGHT_GREEN}-----------------------------------\n"
+clear
+echo -e "\n${COLOR_LIGHT_GREEN}---------------------------------------------"
+echo -e " $PROJECT_TITLE"
+echo -e "${COLOR_LIGHT_GREEN}---------------------------------------------\n"
 
 ## CHECK FOR REQUIRED PACKAGES
 
 # Make sure that the packages needed in order fot the scripts to run properly are installed first.
-echo -e "${COLOR_LIGHT_BLUE}Checking for required packages.${COLOR_LIGHT_GRAY}\n"
+echo -e "${COLOR_LIGHT_BLUE}Check for required packages.${COLOR_LIGHT_GRAY}\n"
 
 # Check if apt update was ran successfully within the last hour or if the user specified the command should be ran.
 if [ `stat -c %Y /var/cache/apt/pkgcache.bin` -lt $((`date +%s` - 3600)) ] || [ ! -z $FORCE_APT_UPDATE ] && [ "$FORCE_APT_UPDATE" == 'true' ] ; then
@@ -92,7 +95,7 @@ CheckPackage git
 ## EXPORT REMAINING VARIABLES
 
 # Variables get the current release version number from the Internet if possible..
-export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/latest.txt)" || ADSB_RECIEVER_CURRENT_VERSION='NA'
+export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/latest.txt)" || PROJECT_CURRENT_VERSION='NA'
 
 # Variables pertaining to the installed operating system.
 export OS_DISTRIBUTION=`. /etc/os-release; echo ${ID/*, /}`
@@ -149,35 +152,35 @@ while [ $# -gt 0 ] ; do
     esac
 done
 
-exit 0
-
 ## PREPARE REPOSITORY
 
 # Checkout the repository branch to be used if it has not already been checked out.
-$CURRENT_BRANCH=`git branch | grep \* | cut -d ' ' -f2`
+echo -e "\n${COLOR_LIGHT_BLUE}Check that the ${PROJECT_BRANCH} branch is checked out.\n"
+CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD`
 if [ "$PROJECT_BRANCH" != "$CURRENT_BRANCH" ] ; then
-    echo -e "\n${COLOR_YELLOW}NOTICE: Currently using the branch \"${CURRENT_BRANCH}\" and not the \"${PROJECT_BRANCH}\" branch."
-    echo -e "${COLOR_LIGHT_BLUE}Checking out the branch \"${PROJECT_BRANCH}\"."
     echo -e "${COLOR_BLUE}Stashing files which have been changed...${COLOR_LIGHT_GRAY}\n"
     git stash
     echo -e "\n${COLOR_BLUE}Checking out the branch ${PROJECT_BRANCH}...${COLOR_LIGHT_GRAY}\n"
     git checkout $PROJECT_BRANCH
-    echo -e "\n${COLOR_YELLOW}NOTICE: The branch named \"${PROJECT_BRANCH}\" has been checked out."
+    echo -e "\n${COLOR_YELLOW}NOTICE: The branch named ${PROJECT_BRANCH} has been checked out."
     echo -e '        Setup will now exit to ensure you are running the latest version of this script.\n'
     echo -e "        Please restart setup using the following command.${COLOR_LIGHT_GRAY}\n"
     if [ -z $ORIGINAL_BRANCH ] && [ "$ORIGINAL_BRANCH" == "$PROJECT_BRANCH" ] ; then
-        echo './install\n'
+        echo -e './install\n'
     else
-        echo "./install -b $PROJECT_BRANCH\n"
+        echo -e "./install -b $PROJECT_BRANCH\n"
     fi
     exit 0
+else
+    echo -e "${COLOR_BLUE}The ${PROJECT_BRANCH} is currently checked out.${COLOR_LIGHT_GRAY}\n"
 fi
 
 # Check if a newer release is available.
-echo -e "${COLOR_LIGHT_BLUE}Checking if a newer release is available."
+echo -e "${COLOR_LIGHT_BLUE}Check if a newer release is available.\n"
+# Make sure we were able to retrieve the latest version from the Internet.
 if [ "$RECIEVER_CURRENT_VERSION" != 'NA' ] ; then
-    # Was able to retrieve current version frm the Internet.
-    if [ `bc -l <<< $RECIEVER_CURRENT_VERSION > $RECIEVER_THIS_VERSION` -eq 1 ] ; then
+    # Compare the current version with this version.
+    if [ `printf '%s\n' "${PROJECT_CURRENT_VERSION}" | sort -V | head -n 1` != "${PROJECT_THIS_VERSION}" ] ; then
         # If a newer release is available ask if it should be downloaded.
         echo -e "${COLOR_YELLOW}NOTICE: A newer release is available.\n"
         while true
@@ -223,24 +226,43 @@ if [ "$RECIEVER_CURRENT_VERSION" != 'NA' ] ; then
             esac
         done
     else
-        echo -e "${COLOR_GREEN}NOTICE: You are using the most current version.${COLOR_LIGHT_GRAY}"
+        echo -e "${COLOR_GREEN}You are using the most current version.${COLOR_LIGHT_GRAY}\n"
     fi
 else
     # Unable to determine the latest release.
-    echo -e "${COLOR_YELLOW}WARNING: Unable to retrieve the latest release version.${COLOR_LIGHT_GRAY}"
+    echo -e "${COLOR_YELLOW}Unable to retrieve the latest release version.${COLOR_LIGHT_GRAY}\n"
 fi
 
+## EXECUTE THE MAIN SETUP SCRIPT
 
-# Reset the color to the system's default color.
-echo -n -e '\e[?0c'
+printf "${COLOR_PURPLE}Starting the setup process." && sleep 1 && printf "." && sleep 1 && printf ".${COLOR_LIGHT_GRAY}"
 
-## UNSET VARIABLES
+chmod +x ${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
+LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%m_%d_%Y_%H_%M_%S").log"
+${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 | tee -a $LOG_FILE
 
+echo -e "${COLOR_PURPLE}Setup process complete.\n"
+
+## CLEAN UP
+
+echo -e "${COLOR_LIGHT_BLUE}Perform post setup clean up operations.\n"
+
+# Clean up the log file generated by the setup process.
+CleanLogFile $LOG_FILE
+echo -e "${COLOR_BLUE}Log file was saved to ${LOG_FILE}."
+
+# Set the exit messages before unsetting the color variables.
+SETUP_COMPLETE_ERROR="\n${COLOR_RED}Setup halted due to errors.${COLOR_LIGHT_GRAY}\n"
+SETUP_COMPLETE_SUCCESS="\n${COLOR_GREEN}Setup completed successfully.${COLOR_LIGHT_GRAY}\n"
+
+# Unset any variables exported by this script.
+echo -e "${COLOR_BLUE}Unsetting any exported variables pertaining to the setup process...${COLOR_LIGHT_GRAY}"
 unset COLOR_BLUE
 unset COLOR_GREEN
 unset COLOR_LIGHT_BLUE
 unset COLOR_LIGHT_GRAY
 unset COLOR_LIGHT_GREEN
+unset COLOR_PURPLE
 unset COLOR_RED
 unset COLOR_YELLOW
 
@@ -255,5 +277,15 @@ unset PROJECT_BRANCH
 unset PROJECT_ROOT_DIRECTORY
 unset PROJECT_BASH_DIRECTORY
 unset PROJECT_BUILD_DIRECTORY
+unset PROJECT_TITLE
 
-exit 0
+## EXIT
+
+# Check if any errors were encountered by any of the child scripts.
+if [ $? -ne 0 ] ; then
+    echo -e "$SETUP_COMPLETE_ERROR"
+    exit 1
+else
+    echo -e "$SETUP_COMPLETE_SUCCESS"
+    exit 0
+fi

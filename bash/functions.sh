@@ -32,8 +32,8 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 #################################################################################
-# Detect if a package is installed and if not attempt to install it.
 
+# Detect if a package is installed and if not attempt to install it.
 function CheckPackage {
 
     CURRENT_ATTEMPT=1
@@ -75,6 +75,12 @@ function CheckPackage {
     done
 }
 
+function CleanLogFile {
+    # Use sed to remove any color sequences from the specified file..
+    sed -i "s,\x1B\[[0-9;]*[a-zA-Z],,g" $1
+}
+
+
 #################################################################################
 # Change a setting in a configuration file.
 # The function expects 3 parameters to be passed to it in the following order.
@@ -104,18 +110,6 @@ function UncommentConfig {
         # Use sed to locate the "KEY" then uncomment the line containing it in the specified "FILE".
         sudo sed -i "/#${1}*/ s/#*//" $2
     fi
-}
-
-#################################################################################
-# The following function is used to clean up the log files by removing
-# any color escaping sequences from the log file so it is easier to read.
-# There are other lines not needed which can be removed as well.
-
-function CleanLogFile {
-    # Use sed to remove any color sequences from the specified "FILE".
-    sed -i "s,\x1B\[[0-9;]*[a-zA-Z],,g" $1
-    # Remove the "Press enter to continue..." lines from the log file.
-    sed -i "/Press enter to continue.../d" $1
 }
 
 #################################################################################
