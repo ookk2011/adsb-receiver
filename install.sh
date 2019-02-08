@@ -75,14 +75,14 @@ echo -e "${COLOR_LIGHT_BLUE}Check for required packages.${COLOR_LIGHT_GRAY}\n"
 if [ `stat -c %Y /var/cache/apt/pkgcache.bin` -lt $((`date +%s` - 3600)) ] || [ ! -z $FORCE_APT_UPDATE ] && [ "$FORCE_APT_UPDATE" == 'true' ] ; then
     # Run the apt update command.
     echo -e "${COLOR_BLUE}Updating apt package lists...${COLOR_LIGHT_GRAY}\n"
-    sudo apt update
+    sudo apt-get update
     echo ''
 fi
 
 if [ ! -z $EXECUTE_APT_UPGRADE ] && [ "$EXECUTE_APT_UPGRADE" == 'true' ] ; then
     # Run the apt upgrade command.
     echo -e "${COLOR_BLUE}Upgrading your system using apt...${COLOR_LIGHT_GRAY}\n"
-    sudo apt -y upgrade
+    sudo apt-get -y upgrade
     echo ''
 fi
 
@@ -235,10 +235,11 @@ fi
 
 ## EXECUTE THE MAIN SETUP SCRIPT
 
-printf "${COLOR_PURPLE}Starting the setup process." && sleep 1 && printf "." && sleep 1 && printf ".${COLOR_LIGHT_GRAY}"
+printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
+sleep 2
 
 chmod +x ${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
-LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%m_%d_%Y_%H_%M_%S").log"
+LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
 ${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 | tee -a $LOG_FILE
 
 echo -e "${COLOR_PURPLE}Setup process complete.\n"

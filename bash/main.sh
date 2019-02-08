@@ -36,19 +36,34 @@
 source ${PROJECT_BASH_DIRECTORY}/variables.sh
 source ${PROJECT_BASH_DIRECTORY}/functions.sh
 
+# Welcome Dialog
 WELCOME_TITLE='Welcome'
+WELCOME_MESSAGE="Welcome,\n\nThe goal of the ADS-B Receiver Project to simplify the software setup process required to run a new ADS-B receiver utilizing a RTL-SDR dongle to receive ADS-B signals from aircraft. This allows those intrested in setting up their own reciever to do so quickly and easily with only a basic knowledge of Linux and the various software packages available.\n\nTo learn more about the project please visit one of the projects official websites.\n\nProject Homepage: https://www.adsbreceiver.net.\nGitHub Repository: https://github.com/jprochazka/adsb-receiver\n\nGood hunting!"
+dialog --stdout --keep-tite --backtitle "$PROJECT_TITLE" --title "$WELCOME_TITLE" --msgbox "$WELCOME_MESSAGE" 0 0
 
-read -d "" WELCOME_MESSAGE << EOM
-Thank you for choosing The ADS-B Receiver Project to setup your receiver.
+# Dump 1090 Selection Dialog
+DUMP_1090_TITLE='Choose Dump 1090 fork'
+DUMP_1090_MESSAGE="Dump 1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original some of the more popular and requested ones are available for in installation. Please choose the fork which you wish to install."
+DUMP_1090_FORK=$(dialog --stdout --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP_1090_TITLE" --radiolist "$DUMP_1090_MESSAGE" 0 0 0 "mutability" "Dump 1090 (Mutability)" on)
+RESULT=$?
+if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+    exit 1
+fi
 
-More information on this project as well as news, support, and discussions can be found on the projects official website located at:
+# Portal Installation Dialog
+PORTAL_TITLE='The ADS-B Receiver Project Portal'
+PORTAL_MESSAGE="The ADS-B Receiver Project Portal\n\nWould you like to install the portal?"
+dialog --stdout --keep-tite --backtitle "$PROJECT_TITLE" --title "$PORTAL_TITLE" --yesno "$PORTAL_MESSAGE" 0 0
+case $? in
+    0) PORTAL_INSTALL="true";;
+    1) PORTAL_INSTALL="false";;
+    255) exit 1;;
+esac
 
-https://www.adsbreceiver.net
-EOM
-
-dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$WELCOME_TITLE" --msgbox "$WELCOME_MESSAGE" 0 0
-
-#echo `tput cols`
-#echo `tput lines`
+echo ''
+echo 'RESULTS'
+echo "Dump 1090 Fork: $DUMP_1090_FORK"
+echo "Install Portal: $PORTAL_INSTALL"
+echo ''
 
 exit 0
