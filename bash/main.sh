@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #####################################################################################
-#                                  ADS-B RECEIVER                                   #
+#                            THE ADS-B RECEIVER PROJECT                             #
 #####################################################################################
 #                                                                                   #
 # This script is not meant to be executed directly.                                 #
@@ -59,11 +59,5 @@ case $? in
     1) PORTAL_INSTALL="false";;
     255) exit 1;;
 esac
-
-echo ''
-echo 'RESULTS'
-echo "Dump 1090 Fork: $DUMP_1090_FORK"
-echo "Install Portal: $PORTAL_INSTALL"
-echo ''
 
 exit 0

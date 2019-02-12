@@ -45,6 +45,7 @@ export PROJECT_ROOT_DIRECTORY="$PWD"
 export PROJECT_BASH_DIRECTORY="${PWD}/bash"
 export PROJECT_BUILD_DIRECTORY="${PWD}/build"
 export PROJECT_TITLE="THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} INSTALLER"
+export PROJECT_LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
 
 export COLOR_BLUE='\e[0;34m'
 export COLOR_GREEN='\e[0;32m'
@@ -239,8 +240,7 @@ printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
 sleep 2
 
 chmod +x ${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
-LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
-${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 | tee -a $LOG_FILE
+${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
 
 echo -e "${COLOR_PURPLE}Setup process complete.\n"
 
@@ -279,6 +279,7 @@ unset PROJECT_ROOT_DIRECTORY
 unset PROJECT_BASH_DIRECTORY
 unset PROJECT_BUILD_DIRECTORY
 unset PROJECT_TITLE
+unset PROJECT_LOG_FILE
 
 ## EXIT
 
