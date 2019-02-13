@@ -237,10 +237,10 @@ fi
 ## EXECUTE THE MAIN SETUP SCRIPT
 
 printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
-sleep 2
+sleep 1
 
 chmod +x ${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
-${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
+${PROJECT_BASH_DIRECTORY}/main.sh
 
 echo -e "${COLOR_PURPLE}Setup process complete.\n"
 
