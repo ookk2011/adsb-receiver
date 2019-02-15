@@ -38,9 +38,7 @@ source ${PROJECT_BASH_DIRECTORY}/functions.sh
 
 ## VARIABLES
 
-#DUMP_1090_FORK
-#INSTALL_DUMP_978
-#INSTALL_PORTAL
+#FEEDERS
 #WEB_SERVER
 #SAVE_FLIGHT_DATA
 #DATABASE_ENGINE
@@ -61,40 +59,158 @@ if [ $? -eq 255 ] ; then
     exit 1
 fi
 
-## DUMP 1090 DIALOGS
+## DUMP1090 DIALOGS
 
-DUMP_1090_FORK_TITLE='Choose Dump 1090 Fork'
-DUMP_1090_FORK_MESSAGE="Dump 1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original. Some of the more popular and requested ones are available for installation using this setup process.\n\nPlease choose the fork which you wish to install."
-DUMP_1090_FORK=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP_1090_FORK_TITLE" --radiolist "$DUMP_1090_FORK_MESSAGE" 0 0 0 \
-                 "mutability" "Dump 1090 (Mutability)" on \
-                 "fa" "Dump 1090 (FlightAware)" off --output-fd 1)
-RESULT=$?
-if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-    exit 1
-fi
+if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
 
-if [ "$DUMP_1090_FORK" == "fa" ] ; then
-    PIAWARE_REQUIRED_TITLE='PiAware Required'
-    PIAWARE_REQUIRED_MESSAGE="Regarding the FlightAware fork of Dump 1090...\n\nThe PiAware software package, which is used to forward ADS-B data to FlightAware, is required in order to use FlightAware's fork of Dump 1090. For this reason PiAware will be installed automatically during the setup process."
-    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$PIAWARE_REQUIRED_TITLE" --msgbox "$PIAWARE_REQUIRED_MESSAGE" 0 0
-    if [ $? -eq 255 ] ; then
+    # A fork of Dump1090 is not installed.
+    DUMP1090_FORK_TITLE='Choose Dump1090 Fork'
+    DUMP1090_FORK_MESSAGE="Dump1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original. Some of the more popular and requested ones are available for installation using this setup process.\n\nPlease choose the fork which you wish to install."
+    DUMP1090_FORK=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_FORK_TITLE" --radiolist "$DUMP1090_FORK_MESSAGE" 0 0 0 \
+                    "mutability" "Dump1090 (Mutability)" on \
+                    "fa" "Dump1090 (FlightAware)" off --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
         exit 1
+    fi
+
+    if [ "$DUMP1090_FORK" == 'fa' ] ; then
+        PIAWARE_REQUIRED_TITLE='PiAware Required'
+        PIAWARE_REQUIRED_MESSAGE="Regarding the FlightAware fork of Dump1090...\n\nThe PiAware software package, which is used to forward ADS-B data to FlightAware, is required in order to use FlightAware's fork of Dump1090. For this reason PiAware will be installed automatically during the setup process."
+        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$PIAWARE_REQUIRED_TITLE" --msgbox "$PIAWARE_REQUIRED_MESSAGE" 0 0
+        if [ $? -eq 255 ] ; then
+            exit 1
+        fi
+    fi
+else
+
+    # A fork of Dump1090 is installed.
+
+    # If an upgrade is available ask if the newer version should be installed.
+    if [ "$DUMP1090_UPGRADEABLE" == 'true' ] ; then
+
+        # Dump1090 (Mutability) new code is no longer versioned so a different question must be asked.
+        if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] ; then
+            # If Dump1090 (Mutability) is installed ask if the user wants to build the current repository master branch contents.
+            UPGRADE_DUMP1090_TITLE='Update Dump1090 (Mutability)'
+            UPGRADE_DUMP1090_MESSAGE="As of v1.15~dev the version number has not changed. However, the source code for the application continues to be worked on. If you wish the repository located locally on this device can be updated and recompiled to ensure you are running the Dump1090 (Mutability) with the latest changes.\n\nUpdate source code and recompile/install Dump1090 (Mutability)?"
+            dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP1090_TITLE" --yesno "$UPGRADE_DUMP1090_MESSAGE" 0 0
+            case $? in
+                0) DUMP1090_UPGRADE='true' ;;
+                1) DUMP1090_UPGRADE='false' ;;
+                255) exit 1 ;;
+            esac
+        else
+            # Ask if any other version of Dump1090 should be upgraded if a new version is available.
+            UPGRADE_DUMP1090_TITLE='Update Dump1090 (FlightAware)'
+            UPGRADE_DUMP1090_MESSAGE="A newer version of Dump1090 (FlightAware) is available.\n\nWould you like to upgrade Dump1090 (FlightAware) now?"
+            dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP1090_TITLE" --yesno "$UPGRADE_DUMP1090_MESSAGE" 0 0
+            case $? in
+                0) DUMP1090_UPGRADE='true' ;;
+                1) DUMP1090_UPGRADE='false' ;;
+                255) exit 1 ;;
+            esac
+
+        fi
+    else
+
+        # It appears Dump1090 is installed and up to date.
+        DUMP1090_INSTALLED_TITLE='Dump1090 Installed'
+        DUMP1090_INSTALLED_MESSAGE='Dump1090 appears to already be installed on this device and according to our records up to date.'
+        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$WELCOME_TITLE" --msgbox "$WELCOME_MESSAGE" 0 0
+        if [ $? -eq 255 ] ; then
+            exit 1
+        fi
     fi
 fi
 
 ## DUMP978 DIALOGS
 
-INSTALL_DUMP_978_TITLE='Install Dump 978'
-INSTALL_DUMP_978_MESSAGE="Dump 978 is a decoder for 978MHz UAT signals.\n\nDump 978 can be install installed in conjunction with Dump 1090 as long as two separate RTL-SDR dongles are present on this device. If you only have a single RTL-SDR dongle installing DUmp 978 along with Dump 1090 is not possible.\n\nWhould you like to install Dump 978?"
-INSTALL_DUMP_978
-dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP_978_TITLE" --yesno "$INSTALL_DUMP_978_MESSAGE" 0 0
-case $? in
-    0) INSTALL_PORTAL="true" ;;
-    1) INSTALL_PORTAL="false" ;;
-    255) exit 1 ;;
-esac
+if [ "$DUMP978_INSTALLED" == 'true' ] ; then
+
+    # Dump978 has not been compiled.
+    INSTALL_DUMP978_TITLE='Install Dump978'
+    INSTALL_DUMP978_MESSAGE="Dump978 is a decoder for 978MHz UAT signals.\n\nDump978 can be install installed in conjunction with Dump1090 as long as two separate RTL-SDR dongles are present on this device. If you only have a single RTL-SDR dongle installing Dump978 along with Dump1090 is not possible.\n\nWhould you like to install Dump978?"
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP_978_TITLE" --yesno "$INSTALL_DUMP_978_MESSAGE" 0 0
+    case $? in
+        0) INSTALL_DUMP978='true' ;;
+        1) INSTALL_DUMP978='false' ;;
+        255) exit 1 ;;
+    esac
+
+    if [ "$INSTALL_DUMP978" == 'true' ] ; then
+
+        # Ask which device should be assigned to Dump1090.
+        DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment'
+        DUMP1090_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump1090.'
+        DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
+
+        # Ask which device should be assigned to Dump978.
+        DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment'
+        DUMP978_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump978.'
+        DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "DUMP978_DEVICE_ID" --output-fd 1)
+    fi
+else
+
+    # Dump978 has been compiled.
+    UPGRADE_DUMP978_TITLE='Update Dump978'
+    UPGRADE_DUMP978_MESSAGE="The source code for Dump978 rarely changes if at all. However, the local source code repository can be updated and the binaries recompiled if you wish to do so.\n\nWould you like to recompile the Dump978 binaries?" 0 0
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP978_TITLE" --yesno "$UPGRADE_DUMP978_MESSAGE" 0 0
+    case $? in
+        0) DUMP978_UPGRADE='true' ;;
+        1) DUMP978_UPGRADE='false' ;;
+        255) exit 1 ;;
+    esac
+fi
 
 ## FEEDER DIALOGS
+
+# Build an array containing feeder installation/upgrade options.
+declare array FEEDER_OPTIONS
+
+# ADS-B Exchange
+if [ "$ADSB_EXCHANGE_CONFIGURED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE" == 'true' ] ; then
+    if [ "$ADSB_EXCHANGE_CONFIGURED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED" == 'false' ] ; then
+        ADSB_EXCHANGE_MLAT_CLIENT_OPTION='ADS-B Exchange'
+    fi
+    if [ "$ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE" == 'true' ] ; then
+        ADSB_EXCHANGE_MLAT_CLIENT_OPTION="${ADSB_EXCHANGE_MLAT_CLIENT_OPTION} (UPGRADE)"
+    fi
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$ADSB_EXCHANGE_MLAT_CLIENT_OPTION' '' OFF)
+fi
+
+# ADSBHub
+
+# flightradar24
+
+# PiAware (FlightAware)
+if [ "$PIAWARE_INSTALLED" == 'false' ] || [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
+    if [ "$PIAWARE_INSTALLED" == 'false' ] ; then
+        PIAWARE_OPTION='FlightAware PiAware'
+    fi
+    if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
+        PIAWARE_OPTION="${PIAWARE_OPTION} (UPGRADE)"
+    fi
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$PIAWARE_OPTION' '' OFF)
+fi
+
+# Plane Finder ADS-B Client (planefinder)
+
+
+# Display feeder options.
+if [ ${FEEDER_LIST[@]} -ne 0 ] ; then
+
+    # Display a list of feeder options for the user to choose from.
+    FEEDERS_TITLE='Feeder Installation Options'
+    FEEDERS_MESSAGE="The following feeders are available for installation.\nChoose the feeders you wish to install."
+    FEEDERS=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$FEEDERS_TITLE" --checklist "$FEEDERS_MESSAGE" 13 65 6 "${FEEDER_LIST[@]}" --output-fd 1)
+else
+
+    # There are no additional feeder options to choose from.
+    NO_FEEDER_OPTIONS_TITLE='All Feeders Installed'
+    NO_FEEDER_OPTIONS_MESSAGE='It appears that all the optional feeders available for installation by this script have been installed already.'
+    whiptail --backtitle "$PROJECT_TITLE" --title "$NO_FEEDER_OPTIONS_TITLE" --msgbox "$NO_FEEDER_OPTIONS_MESSAGE" 0 0
+fi
 
 ## PORTAL DIALOGS
 
@@ -103,12 +219,12 @@ INSTALL_PORTAL_TITLE='The ADS-B Receiver Project Portal'
 INSTALL_PORTAL_MESSAGE="The ADS-B Receiver Project Portal\n\nThe ADS-B Receiver Project Portal is a web based portal which can display position and other information pertaining to aircraft being tracked by your receiver. With the correct hardware in place you can also retain historical data of all aircraft tracked locally which you can reference at a later date.\n\nWould you like to install the portal?"
 dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_PORTAL_TITLE" --yesno "$INSTALL_PORTAL_MESSAGE" 0 0
 case $? in
-    0) INSTALL_PORTAL="true" ;;
-    1) INSTALL_PORTAL="false" ;;
+    0) INSTALL_PORTAL='true' ;;
+    1) INSTALL_PORTAL='false' ;;
     255) exit 1 ;;
 esac
 
-if [ "$INSTALL_PORTAL" == "true" ] ; then
+if [ "$INSTALL_PORTAL" == 'true' ] ; then
 
     # Choose webserver which will be used.
 
@@ -127,12 +243,12 @@ if [ "$INSTALL_PORTAL" == "true" ] ; then
     SAVE_FLIGHT_DATA_MESSAGE='The portal can be configured to save data pertaining to each flight the ADS-B receiver gathers. By saving this data you can search for and view past flights your receiver had tracked.\n\nIMPORTANT:\nIt is highly recommended you answer no if this device uses an SD cards for data storage. It is also recommended you not enable this feature on under powered devices as well.\n\nWould you like to save flight data?'
     dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$SAVE_FLIGHT_DATA_TITLE" --yesno "$SAVE_FLIGHT_DATA_MESSAGE" 0 0
     case $? in
-        0) SAVE_FLIGHT_DATA="true";;
-        1) SAVE_FLIGHT_DATA="false";;
+        0) SAVE_FLIGHT_DATA='true';;
+        1) SAVE_FLIGHT_DATA='false';;
         255) exit 1;;
     esac
 
-    if [ "$SAVE_FLIGHT_DATA" == "true" ] ; then
+    if [ "$SAVE_FLIGHT_DATA" == 'true' ] ; then
 
         # Choose a database engine.
         DATABASE_ENGINE_TITLE='Choose a Database Engine'

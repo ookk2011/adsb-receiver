@@ -36,8 +36,9 @@
 
 ## EXPORT VARIABLES
 
-# PuTTY does not display dialog borders properly when the locale is set to UTF-8. (This fixes the issue.)
-export NCURSES_NO_UTF8_ACS=1
+export DEVICE_CPU_ARCHITECTURE=`uname -m`
+export DEVICE_OS_DISTRIBUTION=`. /etc/os-release; echo ${ID/*, /}`
+export DEVICE_OS_RELEASE=`. /etc/os-release; echo ${VERSION_ID/*, /}`
 
 export PROJECT_THIS_VERSION='3.0.0'
 export PROJECT_BRANCH='3.0'
@@ -47,6 +48,23 @@ export PROJECT_BUILD_DIRECTORY="${PWD}/build"
 export PROJECT_TITLE="THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} INSTALLER"
 export PROJECT_LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
 
+export DUMP1090_FORK=''
+export DUMP1090_INSTALLED='false'
+export DUMP1090_UPGRADEABLE='false'
+export DUMP1090_UPGRADE='false'
+export DUMP1090_DEVICE_ID='0'
+
+export DUMP978_INSTALLED='false'
+export DUMP978_UPGRADEABLE='false'
+export DUMP978_DEVICE_ID='1'
+
+export ADSB_EXCHANGE_CONFIGURED='false'
+export ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED='false'
+export ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE='false'
+
+export PIAWARE_INSTALLED='false'
+export PIAWARE_UPGRADEABLE='false'
+
 export COLOR_BLUE='\e[0;34m'
 export COLOR_GREEN='\e[0;32m'
 export COLOR_LIGHT_BLUE='\e[1;34m'
@@ -55,6 +73,9 @@ export COLOR_LIGHT_GREEN='\e[1;32m'
 export COLOR_PURPLE='\e[0;35m'
 export COLOR_RED='\e[0;31m'
 export COLOR_YELLOW='\e[1;33m'
+
+# PuTTY does not display dialog borders properly when the locale is set to UTF-8. (This fixes the issue.)
+export NCURSES_NO_UTF8_ACS=1
 
 ## SOURCE EXTERNAL SCRIPTS
 
@@ -97,10 +118,6 @@ CheckPackage git
 
 # Variables get the current release version number from the Internet if possible..
 export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/latest.txt)" || PROJECT_CURRENT_VERSION='NA'
-
-# Variables pertaining to the installed operating system.
-export OS_DISTRIBUTION=`. /etc/os-release; echo ${ID/*, /}`
-export OS_RELEASE=`. /etc/os-release; echo ${VERSION_ID/*, /}`
 
 ## FUNCTIONS
 
@@ -258,6 +275,33 @@ SETUP_COMPLETE_SUCCESS="\n${COLOR_GREEN}Setup completed successfully.${COLOR_LIG
 
 # Unset any variables exported by this script.
 echo -e "${COLOR_BLUE}Unsetting any exported variables pertaining to the setup process...${COLOR_LIGHT_GRAY}"
+
+unset DEVICE_CPU_ARCHITECTURE
+unset DEVICE_OS_DISTRIBUTION
+unset DEVICE_OS_RELEASE
+
+unset PROJECT_THIS_VERSION
+unset PROJECT_CURRENT_VERSION
+unset PROJECT_BRANCH
+unset PROJECT_ROOT_DIRECTORY
+unset PROJECT_BASH_DIRECTORY
+unset PROJECT_BUILD_DIRECTORY
+unset PROJECT_TITLE
+unset PROJECT_LOG_FILE
+
+unset DUMP1090_FORK
+unset DUMP1090_INSTALLED
+unset DUMP1090_UPGRADEABLE
+unset DUMP1090_UPGRADE
+unset DUMP1090_DEVICE_ID
+
+unset DUMP978_INSTALLED
+unset DUMP978_UPGRADEABLE
+unset DUMP978_DEVICE_ID
+
+unset PIAWARE_INSTALLED
+unset PIAWARE_UPGRADEABLE
+
 unset COLOR_BLUE
 unset COLOR_GREEN
 unset COLOR_LIGHT_BLUE
@@ -268,18 +312,6 @@ unset COLOR_RED
 unset COLOR_YELLOW
 
 unset NCURSES_NO_UTF8_ACS
-
-unset OS_DISTRIBUTION
-unset OS_RELEASE
-
-unset PROJECT_THIS_VERSION
-unset PROJECT_CURRENT_VERSION
-unset PROJECT_BRANCH
-unset PROJECT_ROOT_DIRECTORY
-unset PROJECT_BASH_DIRECTORY
-unset PROJECT_BUILD_DIRECTORY
-unset PROJECT_TITLE
-unset PROJECT_LOG_FILE
 
 ## EXIT
 

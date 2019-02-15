@@ -31,17 +31,11 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-## SOFTWARE VERSIONS
-
-# The ADS-B Receiver Project
-PROJECT_VERSION="2.6.3"
-
-# RTL-SDR OGN
-RTLSDROGN_VERSION="0.2.5"
+## CURRENT THIRD PARTY SOFTWARE VERSIONS
 
 # FlightAware PiAware
-DUMP1090_FA_VERSION="3.6.3"
-PIAWARE_VERSION="3.6.3"
+CURRENT_DUMP1090_FA_VERSION="3.6.3"
+CURRENT_PIAWARE_VERSION="3.6.3"
 
 # PlaneFinder Client
 PLANEFINDER_CLIENT_VERSION_ARM="4.1.1"
@@ -51,8 +45,8 @@ PLANEFINDER_CLIENT_VERSION_I386="4.1.1"
 FLIGHTRADAR24_CLIENT_VERSION_I386="1.0.18-5"
 
 # mlat-client
-MLAT_CLIENT_VERSION="0.2.6"
-MLAT_CLIENT_TAG="v0.2.6"
+WORKING_MLAT_CLIENT_VERSION="0.2.6"
+WORKING_MLAT_CLIENT_TAG="v0.2.6"
 
 # PhantomJS
 PHANTOMJS_VERSION="2.1.1"
