@@ -67,14 +67,23 @@ if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
     DUMP1090_FORK_TITLE='Choose Dump1090 Fork'
     DUMP1090_FORK_MESSAGE="Dump1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original. Some of the more popular and requested ones are available for installation using this setup process.\n\nPlease choose the fork which you wish to install."
     DUMP1090_FORK=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_FORK_TITLE" --radiolist "$DUMP1090_FORK_MESSAGE" 0 0 0 \
-                    "mutability" "Dump1090 (Mutability)" on \
-                    "fa" "Dump1090 (FlightAware)" off --output-fd 1)
+                    "dump1090-mutability" "(Mutability)" on \
+                    "dump1090-fa" "(FlightAware)" off \
+                    "dump1090-hptoa" "(OpenSky Network)" off --output-fd 1)
     RESULT=$?
     if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
         exit 1
     fi
 
-    if [ "$DUMP1090_FORK" == 'fa' ] ; then
+    # If dump1090-mutability or dump1090-hptoa was selected gather additional information needed to configure Dump1090.
+    if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] || [ "$DUMP1090_FORK" == 'dump1090-hptoa'] ; then
+        RECIEVER_LATITUDE
+        RECEIVER_LONGITUDE
+        BIND_TO_ALL_IP_ADDRESSES
+        UNIT_OF_MEASURMENT
+    fi
+
+    if [ "$DUMP1090_FORK" == 'dump1090-fa' ] ; then
         PIAWARE_REQUIRED_TITLE='PiAware Required'
         PIAWARE_REQUIRED_MESSAGE="Regarding the FlightAware fork of Dump1090...\n\nThe PiAware software package, which is used to forward ADS-B data to FlightAware, is required in order to use FlightAware's fork of Dump1090. For this reason PiAware will be installed automatically during the setup process."
         dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$PIAWARE_REQUIRED_TITLE" --msgbox "$PIAWARE_REQUIRED_MESSAGE" 0 0
@@ -82,6 +91,9 @@ if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
             exit 1
         fi
     fi
+
+    # Ask if heywhatsthat.com range rings should be added.
+
 else
 
     # A fork of Dump1090 is installed.
@@ -90,14 +102,20 @@ else
     if [ "$DUMP1090_UPGRADEABLE" == 'true' ] ; then
 
         # Dump1090 (Mutability) new code is no longer versioned so a different question must be asked.
-        if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] ; then
-            # If Dump1090 (Mutability) is installed ask if the user wants to build the current repository master branch contents.
-            UPGRADE_DUMP1090_TITLE='Update Dump1090 (Mutability)'
-            UPGRADE_DUMP1090_MESSAGE="As of v1.15~dev the version number has not changed. However, the source code for the application continues to be worked on. If you wish the repository located locally on this device can be updated and recompiled to ensure you are running the Dump1090 (Mutability) with the latest changes.\n\nUpdate source code and recompile/install Dump1090 (Mutability)?"
+        if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] || [ "$DUMP1090_FORK" == 'dump1090-hptoa'] ; then
+            # If Dump1090 (Mutability) or Dump1090 (HPTOA) is installed ask if the user wants to build the current repository master branch contents.
+            if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] ; then
+                UPGRADE_DUMP1090_TITLE='Update Dump1090 (Mutability)'
+                UPGRADE_DUMP1090_MESSAGE="As of v1.15~dev the version number has not changed. However, the source code for the application continues to be worked on. If you wish the repository located locally on this device can be updated and recompiled to ensure you are running the Dump1090 (Mutability) with the latest changes.\n\nUpdate source code and recompile/install Dump1090 (Mutability)?"
+            fi
+            if [ "$DUMP1090_FORK" == 'dump1090-hptoa' ] ; then
+                UPGRADE_DUMP1090_TITLE='Update Dump1090 (HPTOA)'
+                UPGRADE_DUMP1090_MESSAGE="As of this moment there have been no releases made specifically for Dump1090 (HPTOA). However, the source code for the application may have changed but with no versioning it is hard to tell if these changes, if any, are reflected in the binaries currently compiled on your device. If you wish the repository located locally on this device can be updated and recompiled to ensure you are running the Dump1090 (HPTOA) with the latest changes.\n\nUpdate source code and recompile Dump1090 (HPTOA)?"
+            fi
             dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP1090_TITLE" --yesno "$UPGRADE_DUMP1090_MESSAGE" 0 0
             case $? in
-                0) DUMP1090_UPGRADE='true' ;;
-                1) DUMP1090_UPGRADE='false' ;;
+                0) UPGRADE_DUMP1090='true' ;;
+                1) UPGRADE_DUMP1090='false' ;;
                 255) exit 1 ;;
             esac
         else
@@ -106,8 +124,8 @@ else
             UPGRADE_DUMP1090_MESSAGE="A newer version of Dump1090 (FlightAware) is available.\n\nWould you like to upgrade Dump1090 (FlightAware) now?"
             dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP1090_TITLE" --yesno "$UPGRADE_DUMP1090_MESSAGE" 0 0
             case $? in
-                0) DUMP1090_UPGRADE='true' ;;
-                1) DUMP1090_UPGRADE='false' ;;
+                0) UPGRADE_DUMP1090='true' ;;
+                1) UPGRADE_DUMP1090='false' ;;
                 255) exit 1 ;;
             esac
 
@@ -143,12 +161,17 @@ if [ "$DUMP978_INSTALLED" == 'true' ] ; then
         # Ask which device should be assigned to Dump1090.
         DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment'
         DUMP1090_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump1090.'
-        DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
-
+        while [ -z $DUMP1090_DEVICE_ID ] ; do
+            DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
+            DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment [REQUIRED]'
+        do
         # Ask which device should be assigned to Dump978.
         DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment'
         DUMP978_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump978.'
-        DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "DUMP978_DEVICE_ID" --output-fd 1)
+        while [ -z $DUMP978_DEVICE_ID ] ; do
+            DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "DUMP978_DEVICE_ID" --output-fd 1)
+            DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment [REQUIRED]'
+        do
     fi
 else
 
@@ -157,8 +180,8 @@ else
     UPGRADE_DUMP978_MESSAGE="The source code for Dump978 rarely changes if at all. However, the local source code repository can be updated and the binaries recompiled if you wish to do so.\n\nWould you like to recompile the Dump978 binaries?" 0 0
     dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP978_TITLE" --yesno "$UPGRADE_DUMP978_MESSAGE" 0 0
     case $? in
-        0) DUMP978_UPGRADE='true' ;;
-        1) DUMP978_UPGRADE='false' ;;
+        0) UPGRADE_DUMP978='true' ;;
+        1) UPGRADE_DUMP978='false' ;;
         255) exit 1 ;;
     esac
 fi
@@ -171,17 +194,37 @@ declare array FEEDER_OPTIONS
 # ADS-B Exchange
 if [ "$ADSB_EXCHANGE_CONFIGURED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE" == 'true' ] ; then
     if [ "$ADSB_EXCHANGE_CONFIGURED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED" == 'false' ] ; then
-        ADSB_EXCHANGE_MLAT_CLIENT_OPTION='ADS-B Exchange'
+        ADSB_EXCHANGE_FEEDER_OPTION='ADS-B Exchange'
     fi
     if [ "$ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE" == 'true' ] ; then
-        ADSB_EXCHANGE_MLAT_CLIENT_OPTION="${ADSB_EXCHANGE_MLAT_CLIENT_OPTION} (UPGRADE)"
+        ADSB_EXCHANGE_FEEDER_OPTION="${ADSB_EXCHANGE_MLAT_CLIENT_OPTION} (UPGRADE)"
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$ADSB_EXCHANGE_MLAT_CLIENT_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$ADSB_EXCHANGE_FEEDER_OPTION' '' OFF)
 fi
 
 # ADSBHub
 
-# flightradar24
+if [ "$ADSBHUB_INSTALLED" == 'false' ] || [ "$ADSBHUB_CONFIGURED" == 'false' ] ; then
+    ADSBHUB_OPTION='ADSBHub'
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$ADSBHUB_OPTION' '' OFF)
+fi
+
+# FR24Feed (flightradar24)
+if [ "$FR24FEED_PACKAGE_INSTALLED" == 'false' ] || [ "$FR24FEED_PACKAGE_UPGRADEABLE" == 'true' ] ; then
+    if [ "$FR24FEED_PACKAGE_INSTALLED" == 'false' ] ; then
+        FR24FEED_OPTION='Flightradar24 FR24Feed'
+    fi
+    if [ "$FR24FEED_PACKAGE_UPGRADEABLE" == 'true' ] ; then
+        FR24FEED_OPTION='Flightradar24 FR24Feed (UPGRADE)'
+    fi
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$FR24FEED_OPTION' '' OFF)
+fi
+
+
+if [ "$OPENSKY_FEEDER_INSTALLED" == "false" ] ; then
+    OPENSKY_OPTION='OpenSky Network Feeder'
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$OPENSKY_OPTION' '' OFF)
+fi
 
 # PiAware (FlightAware)
 if [ "$PIAWARE_INSTALLED" == 'false' ] || [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
@@ -189,20 +232,29 @@ if [ "$PIAWARE_INSTALLED" == 'false' ] || [ "$PIAWARE_UPGRADEABLE" == 'true' ] ;
         PIAWARE_OPTION='FlightAware PiAware'
     fi
     if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
-        PIAWARE_OPTION="${PIAWARE_OPTION} (UPGRADE)"
+        PIAWARE_OPTION='FlightAware PiAware (UPGRADE)'
     fi
     FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$PIAWARE_OPTION' '' OFF)
 fi
 
 # Plane Finder ADS-B Client (planefinder)
 
+if [ "PLANEFINDER_CLIENT_INSTALLED" == 'false' ] || [ "$PLANEFINDER_CLIENT_UPGRADEABLE" == 'true' ] ; then
+    if [ "$PIAWARE_INSTALLED" == 'false' ] ; then
+        PIAWARE_OPTION='Planefinder Client'
+    fi
+    if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
+        PIAWARE_OPTION='Planefinder Client (UPGRADE)'
+    fi
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$PFCLIENT_OPTION' '' OFF)
+fi
 
 # Display feeder options.
 if [ ${FEEDER_LIST[@]} -ne 0 ] ; then
 
     # Display a list of feeder options for the user to choose from.
     FEEDERS_TITLE='Feeder Installation Options'
-    FEEDERS_MESSAGE="The following feeders are available for installation.\nChoose the feeders you wish to install."
+    FEEDERS_MESSAGE="The following feeder options are available for installation or upgrade.\nChoose the feeders you wish to install or upgrade."
     FEEDERS=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$FEEDERS_TITLE" --checklist "$FEEDERS_MESSAGE" 13 65 6 "${FEEDER_LIST[@]}" --output-fd 1)
 else
 
