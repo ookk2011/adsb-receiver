@@ -61,6 +61,13 @@ fi
 
 ## DUMP1090 DIALOGS
 
+if [ "$DUMP1090_INSTALLED" == 'true' ] && [ "$DUMP1090_FORK" == 'dump1090-mutability' ] && [ -s /etc/default/dump1090-mutability ] ; then
+    # If dump1090-mutability selected or is already installed get variable values from its configuration file.
+    RECIEVER_LATITUDE=`GetConfig "LAT" "/etc/default/dump1090-mutability"`
+    RECEIVER_LONGITUDE=`GetConfig "LON" "/etc/default/dump1090-mutability"`
+    BING_MAPS_API_KEY=`GetConfig "BingMapsAPIKey" "/usr/share/dump1090-mutability/html/config.js"`
+fi
+
 if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
 
     # A fork of Dump1090 is not installed.
@@ -75,14 +82,7 @@ if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
         exit 1
     fi
 
-    # If dump1090-mutability or dump1090-hptoa was selected gather additional information needed to configure Dump1090.
-    if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] || [ "$DUMP1090_FORK" == 'dump1090-hptoa'] ; then
-        RECIEVER_LATITUDE
-        RECEIVER_LONGITUDE
-        BIND_TO_ALL_IP_ADDRESSES
-        UNIT_OF_MEASURMENT
-    fi
-
+    # If dump1090-fa was selected inform the user PiAware will be installed as well.
     if [ "$DUMP1090_FORK" == 'dump1090-fa' ] ; then
         PIAWARE_REQUIRED_TITLE='PiAware Required'
         PIAWARE_REQUIRED_MESSAGE="Regarding the FlightAware fork of Dump1090...\n\nThe PiAware software package, which is used to forward ADS-B data to FlightAware, is required in order to use FlightAware's fork of Dump1090. For this reason PiAware will be installed automatically during the setup process."
@@ -91,9 +91,6 @@ if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
             exit 1
         fi
     fi
-
-    # Ask if heywhatsthat.com range rings should be added.
-
 else
 
     # A fork of Dump1090 is installed.
@@ -142,6 +139,40 @@ else
     fi
 fi
 
+
+
+    # Ask for information needed to configure dump1090-mutability.
+    if [ "$DUMP1090_FORK" == 'dump1090-fa' ] ; then
+        RECIEVER_LATITUDE_TITLE='Receiver Latitude'
+        RECIEVER_LATITUDE_MESSAGE=''
+
+        RECIEVER_LONGITUDE_TITLE='Receiver Longitude'
+        RECIEVER_LONGITUDE_MESSAGE=''
+
+        DUMP1090_MAX_RANGE_TITLE='Dump1090-mutability Maximum Range'
+        DUMP1090_MAX_RANGE_MESSAGE=''
+
+        BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE='Bind dump1090-mutability To All IP Addresses'
+        BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE="By default dump1090-mutability is bound only to the local loopback IP address(s) for security reasons. However some people wish to make dump1090-mutability's d$
+        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE" --yesno "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE" 0 0
+        case $? in
+            0) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='true' ;;
+            1) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='false' ;;
+            255) exit 1 ;;
+        esac
+
+        UNIT_OF_MEASURMENT_TITLE='Select Dump1090 Unit of Measurement'
+        UNIT_OF_MEASURMENT_MESSAGE='Please select the unit of measurement to be used by dump1090-mutability.'
+        dialog  --keep-tite --backtitle "$PROJECT_TITLE" --title "$UNIT_OF_MEASURMENT_TITLE" --yesno "$UNIT_OF_MEASURMENT_MESSAGE" --yes-button "Imperial" --no-button "Metric" 0 0
+        case $? in
+            0) UNIT_OF_MEASURMENT='imperial' ;;
+            1) UNIT_OF_MEASURMENT='metric' ;;
+            255) exit 1 ;;
+        esac
+    fi
+
+
+
 ## DUMP978 DIALOGS
 
 if [ "$DUMP978_INSTALLED" == 'true' ] ; then
@@ -162,14 +193,14 @@ if [ "$DUMP978_INSTALLED" == 'true' ] ; then
         DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment'
         DUMP1090_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump1090.'
         while [ -z $DUMP1090_DEVICE_ID ] ; do
-            DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
+            DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
             DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment [REQUIRED]'
         do
         # Ask which device should be assigned to Dump978.
         DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment'
         DUMP978_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump978.'
         while [ -z $DUMP978_DEVICE_ID ] ; do
-            DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "DUMP978_DEVICE_ID" --output-fd 1)
+            DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "DUMP978_DEVICE_ID" --output-fd 1)
             DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment [REQUIRED]'
         do
     fi
@@ -290,6 +321,12 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
         exit 1
     fi
 
+
+
+    # Ask if heywhatsthat.com range rings should be added.
+
+
+
     # Choose whether or not to save flight data.
     SAVE_FLIGHT_DATA_TITLE='Enable Historical Flight Data Collection'
     SAVE_FLIGHT_DATA_MESSAGE='The portal can be configured to save data pertaining to each flight the ADS-B receiver gathers. By saving this data you can search for and view past flights your receiver had tracked.\n\nIMPORTANT:\nIt is highly recommended you answer no if this device uses an SD cards for data storage. It is also recommended you not enable this feature on under powered devices as well.\n\nWould you like to save flight data?'
@@ -319,7 +356,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
             MYSQL_HOSTNAME_TITLE='Enter the MySQL/MariaDB Server Hostname'
             MYSQL_HOSTNAME_MESSAGE='Enter the hostname of the MySQL/MariaDB database server you will use to store historical flight data.\n\nIf set to localhost MySQL or MariaDB will be installed on this device and configured automatically. If this is a remote MySQL/MariaDB server the database and a user must already exist on said server.'
             while [ -z $MYSQL_HOSTNAME ] ; do
-                MYSQL_HOSTNAME=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_HOSTNAME_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$MYSQL_HOSTNAME_MESSAGE" 0 0 "localhost" --output-fd 1)
+                MYSQL_HOSTNAME=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_HOSTNAME_TITLE" --inputbox "$MYSQL_HOSTNAME_MESSAGE" 0 0 "localhost" --output-fd 1)
                 RESULT=$?
                 if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
                     exit 1
@@ -370,7 +407,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
             MYSQL_DATABASE_TITLE='MySQL/MariaDB Database Name'
             MYSQL_DATABASE_MESSAGE='Please supply the name of the database which will be used to store your receivers historical flight tracking data.'
             while [ -z $MYSQL_DATABASE ] ; do
-                MYSQL_DATABASE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_DATABASE_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$MYSQL_DATABASE_MESSAGE" 0 0 --output-fd 1)
+                MYSQL_DATABASE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_DATABASE_TITLE" --inputbox "$MYSQL_DATABASE_MESSAGE" 0 0 --output-fd 1)
                 RESULT=$?
                 if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
                     exit 1
@@ -382,7 +419,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
             MYSQL_USER_TITLE='MySQL/MariaDB Database User Name'
             MYSQL_USER_MESSAGE='Supply the name of the user which has permission to use this database.'
             while [ -z $MYSQL_USER ] ; do
-                MYSQL_USER=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_USER_TITLE" --backtitle "$PROJECT_TITLE" --inputbox "$MYSQL_USER_MESSAGE" 0 0 --output-fd 1)
+                MYSQL_USER=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_USER_TITLE" --inputbox "$MYSQL_USER_MESSAGE" 0 0 --output-fd 1)
                 RESULT=$?
                 if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
                     exit 1

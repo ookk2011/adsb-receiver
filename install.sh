@@ -117,7 +117,7 @@ CheckPackage git
 ## EXPORT REMAINING VARIABLES
 
 # Variables get the current release version number from the Internet if possible..
-export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/latest.txt)" || PROJECT_CURRENT_VERSION='NA'
+export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/version.txt)" || PROJECT_CURRENT_VERSION='NA'
 
 ## FUNCTIONS
 
@@ -203,7 +203,8 @@ if [ "$RECIEVER_CURRENT_VERSION" != 'NA' ] ; then
         echo -e "${COLOR_YELLOW}NOTICE: A newer release is available.\n"
         while true
         do
-            read -r -p "\n${COLOR_LIGHT_BLUE}Would you like to download the latest release? [y/n] ${COLOR_LIGHT_GRAY}" INPUT
+            echo -e -n "${COLOR_LIGHT_BLUE}Would you like to download the latest release? [y/n] ${COLOR_LIGHT_GRAY}"
+            read -r INPUT
             case "$INPUT" in
 
                 # Update the local repository.
