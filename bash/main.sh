@@ -50,6 +50,7 @@ source ${PROJECT_BASH_DIRECTORY}/functions.sh
 #MYSQL_USER_PASSWORD1
 #MYSQL_USER_PASSWORD2
 
+## --------------
 ## WELCOME DIALOG
 
 WELCOME_TITLE='Welcome'
@@ -59,6 +60,7 @@ if [ $? -eq 255 ] ; then
     exit 1
 fi
 
+## ----------------
 ## DUMP1090 DIALOGS
 
 if [ "$DUMP1090_INSTALLED" == 'true' ] && [ "$DUMP1090_FORK" == 'dump1090-mutability' ] && [ -s /etc/default/dump1090-mutability ] ; then
@@ -71,6 +73,7 @@ fi
 if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
 
     # A fork of Dump1090 is not installed.
+
     DUMP1090_FORK_TITLE='Choose Dump1090 Fork'
     DUMP1090_FORK_MESSAGE="Dump1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original. Some of the more popular and requested ones are available for installation using this setup process.\n\nPlease choose the fork which you wish to install."
     DUMP1090_FORK=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_FORK_TITLE" --radiolist "$DUMP1090_FORK_MESSAGE" 0 0 0 \
@@ -139,48 +142,72 @@ else
     fi
 fi
 
+# Ask for information needed to configure dump1090-mutability.
+if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] ; then
 
+    RECIEVER_LATITUDE_TITLE='Receiver Latitude'
+    RECIEVER_LATITUDE_MESSAGE="Enter your receiver's latitude.\n(Example: XX.XXXXXXX)"
+    while [ -z $RECIEVER_LATITUDE ] ; do
+        RECIEVER_LATITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECIEVER_LATITUDE_TITLE" --inputbox "$RECIEVER_LATITUDE_MESSAGE" 0 0 "$RECIEVER_LATITUDE" --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
+        RECIEVER_LATITUDE_TITLE='Receiver Latitude [REQUIRED]'
+    done
 
-    # Ask for information needed to configure dump1090-mutability.
-    if [ "$DUMP1090_FORK" == 'dump1090-fa' ] ; then
-        RECIEVER_LATITUDE_TITLE='Receiver Latitude'
-        RECIEVER_LATITUDE_MESSAGE=''
+    RECIEVER_LONGITUDE_TITLE='Receiver Longitude'
+    RECIEVER_LONGITUDE_MESSAGE="Enter your receeiver's longitude.\n(Example: XX.XXXXXXX)"
+    while [ -z $RECIEVER_LONGITUDE ] ; do
+        RECIEVER_LONGITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECIEVER_LONGITUDE_TITLE" --inputbox "$RECIEVER_LONGITUDE_MESSAGE" 0 0 "$RECIEVER_LONGITUDE" --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
+        RECIEVER_LONGITUDE_TITLE='Receiver Longitude [REQUIRED]'
+    done
 
-        RECIEVER_LONGITUDE_TITLE='Receiver Longitude'
-        RECIEVER_LONGITUDE_MESSAGE=''
+    DUMP1090_MAX_RANGE_TITLE='Dump1090-mutability Maximum Range'
+    DUMP1090_MAX_RANGE_MESSAGE='The dump1090-mutability default maximum range value of 300 nmi (~550km) has been reported to be below what is possible under the right conditions, so this value will be increased to 360 nmi (~660 km) to match the value used by the dump1090-fa fork.'
+    while [ -z $DUMP1090_MAX_RANGE ] ; do
+        DUMP1090_MAX_RANGE='360'
+        DUMP1090_MAX_RANGE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_MAX_RANGE_TITLE" --inputbox "$DUMP1090_MAX_RANGE_MESSAGE" 0 0 "$DUMP1090_MAX_RANGE" --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
+        RECIEVER_LATITUDE_TITLE='Dump1090-mutability Maximum Range [REQUIRED]'
+    done
 
-        DUMP1090_MAX_RANGE_TITLE='Dump1090-mutability Maximum Range'
-        DUMP1090_MAX_RANGE_MESSAGE=''
+    BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE='Bind dump1090-mutability To All IP Addresses'
+    BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE="By default dump1090-mutability is bound only to the local loopback IP address(s) for security reasons. However some people wish to make dump1090-mutability's data accessable externally by other devices. To allow this dump1090-mutability can be configured to listen on all IP addresses bound to this device. It is recommended that unless you plan to access this device from an external source that dump1090-mutability remain bound only to the local loopback IP address(s).\n\nWould you like dump1090-mutability to listen on all IP addesses?"
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE" --yesno "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE" 0 0
+    case $? in
+        0) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='true' ;;
+        1) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='false' ;;
+        255) exit 1 ;;
+    esac
 
-        BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE='Bind dump1090-mutability To All IP Addresses'
-        BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE="By default dump1090-mutability is bound only to the local loopback IP address(s) for security reasons. However some people wish to make dump1090-mutability's d$
-        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE" --yesno "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE" 0 0
-        case $? in
-            0) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='true' ;;
-            1) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='false' ;;
-            255) exit 1 ;;
-        esac
+    UNIT_OF_MEASURMENT_TITLE='Select Dump1090 Unit of Measurement'
+    UNIT_OF_MEASURMENT_MESSAGE='Please select the unit of measurement to be used by dump1090-mutability.'
+    dialog  --keep-tite --backtitle "$PROJECT_TITLE" --title "$UNIT_OF_MEASURMENT_TITLE" --yes-button "Imperial" --no-button "Metric" --yesno "$UNIT_OF_MEASURMENT_MESSAGE" 0 0
+    case $? in
+        0) UNIT_OF_MEASURMENT='imperial' ;;
+        1) UNIT_OF_MEASURMENT='metric' ;;
+        255) exit 1 ;;
+    esac
+fi
 
-        UNIT_OF_MEASURMENT_TITLE='Select Dump1090 Unit of Measurement'
-        UNIT_OF_MEASURMENT_MESSAGE='Please select the unit of measurement to be used by dump1090-mutability.'
-        dialog  --keep-tite --backtitle "$PROJECT_TITLE" --title "$UNIT_OF_MEASURMENT_TITLE" --yesno "$UNIT_OF_MEASURMENT_MESSAGE" --yes-button "Imperial" --no-button "Metric" 0 0
-        case $? in
-            0) UNIT_OF_MEASURMENT='imperial' ;;
-            1) UNIT_OF_MEASURMENT='metric' ;;
-            255) exit 1 ;;
-        esac
-    fi
-
-
-
+## ---------------
 ## DUMP978 DIALOGS
 
-if [ "$DUMP978_INSTALLED" == 'true' ] ; then
+if [ "$DUMP978_INSTALLED" == 'false' ] ; then
 
     # Dump978 has not been compiled.
+
     INSTALL_DUMP978_TITLE='Install Dump978'
     INSTALL_DUMP978_MESSAGE="Dump978 is a decoder for 978MHz UAT signals.\n\nDump978 can be install installed in conjunction with Dump1090 as long as two separate RTL-SDR dongles are present on this device. If you only have a single RTL-SDR dongle installing Dump978 along with Dump1090 is not possible.\n\nWhould you like to install Dump978?"
-    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP_978_TITLE" --yesno "$INSTALL_DUMP_978_MESSAGE" 0 0
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP978_TITLE" --defaultno --yesno "$INSTALL_DUMP978_MESSAGE" 0 0
     case $? in
         0) INSTALL_DUMP978='true' ;;
         1) INSTALL_DUMP978='false' ;;
@@ -193,20 +220,31 @@ if [ "$DUMP978_INSTALLED" == 'true' ] ; then
         DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment'
         DUMP1090_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump1090.'
         while [ -z $DUMP1090_DEVICE_ID ] ; do
+            DUMP1090_DEVICE_ID='0'
             DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
+            RESULT=$?
+            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                exit 1
+            fi
             DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment [REQUIRED]'
-        do
+        done
         # Ask which device should be assigned to Dump978.
         DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment'
         DUMP978_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump978.'
         while [ -z $DUMP978_DEVICE_ID ] ; do
-            DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "DUMP978_DEVICE_ID" --output-fd 1)
+            DUMP978_DEVICE_ID='1'
+            DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "$DUMP978_DEVICE_ID" --output-fd 1)
+            RESULT=$?
+            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                exit 1
+            fi
             DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment [REQUIRED]'
-        do
+        done
     fi
 else
 
     # Dump978 has been compiled.
+
     UPGRADE_DUMP978_TITLE='Update Dump978'
     UPGRADE_DUMP978_MESSAGE="The source code for Dump978 rarely changes if at all. However, the local source code repository can be updated and the binaries recompiled if you wish to do so.\n\nWould you like to recompile the Dump978 binaries?" 0 0
     dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP978_TITLE" --yesno "$UPGRADE_DUMP978_MESSAGE" 0 0
@@ -217,6 +255,7 @@ else
     esac
 fi
 
+## --------------
 ## FEEDER DIALOGS
 
 # Build an array containing feeder installation/upgrade options.
@@ -228,16 +267,16 @@ if [ "$ADSB_EXCHANGE_CONFIGURED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_I
         ADSB_EXCHANGE_FEEDER_OPTION='ADS-B Exchange'
     fi
     if [ "$ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE" == 'true' ] ; then
-        ADSB_EXCHANGE_FEEDER_OPTION="${ADSB_EXCHANGE_MLAT_CLIENT_OPTION} (UPGRADE)"
+        ADSB_EXCHANGE_FEEDER_OPTION="${ADSB_EXCHANGE_MLAT_CLIENT_OPTION} \(UPGRADE\)"
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$ADSB_EXCHANGE_FEEDER_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${ADSB_EXCHANGE_FEEDER_OPTION}" '' OFF)
 fi
 
 # ADSBHub
 
 if [ "$ADSBHUB_INSTALLED" == 'false' ] || [ "$ADSBHUB_CONFIGURED" == 'false' ] ; then
     ADSBHUB_OPTION='ADSBHub'
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$ADSBHUB_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${ADSBHUB_OPTION}" '' OFF)
 fi
 
 # FR24Feed (flightradar24)
@@ -248,13 +287,13 @@ if [ "$FR24FEED_PACKAGE_INSTALLED" == 'false' ] || [ "$FR24FEED_PACKAGE_UPGRADEA
     if [ "$FR24FEED_PACKAGE_UPGRADEABLE" == 'true' ] ; then
         FR24FEED_OPTION='Flightradar24 FR24Feed (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$FR24FEED_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${FR24FEED_OPTION}" '' OFF)
 fi
 
 
 if [ "$OPENSKY_FEEDER_INSTALLED" == "false" ] ; then
     OPENSKY_OPTION='OpenSky Network Feeder'
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$OPENSKY_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${OPENSKY_OPTION}" '' OFF)
 fi
 
 # PiAware (FlightAware)
@@ -265,7 +304,7 @@ if [ "$PIAWARE_INSTALLED" == 'false' ] || [ "$PIAWARE_UPGRADEABLE" == 'true' ] ;
     if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
         PIAWARE_OPTION='FlightAware PiAware (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$PIAWARE_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${PIAWARE_OPTION}" '' OFF)
 fi
 
 # Plane Finder ADS-B Client (planefinder)
@@ -277,22 +316,28 @@ if [ "PLANEFINDER_CLIENT_INSTALLED" == 'false' ] || [ "$PLANEFINDER_CLIENT_UPGRA
     if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
         PIAWARE_OPTION='Planefinder Client (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" '$PFCLIENT_OPTION' '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${PFCLIENT_OPTION}" '' OFF)
 fi
 
 # Display feeder options.
-if [ ${FEEDER_LIST[@]} -ne 0 ] ; then
-
+if [ ${#FEEDER_OPTIONS[@]} -ne 0 ] ; then
     # Display a list of feeder options for the user to choose from.
     FEEDERS_TITLE='Feeder Installation Options'
     FEEDERS_MESSAGE="The following feeder options are available for installation or upgrade.\nChoose the feeders you wish to install or upgrade."
-    FEEDERS=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$FEEDERS_TITLE" --checklist "$FEEDERS_MESSAGE" 13 65 6 "${FEEDER_LIST[@]}" --output-fd 1)
+    FEEDERS=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$FEEDERS_TITLE" --checklist "$FEEDERS_MESSAGE" 13 65 6 "${FEEDER_OPTIONS[@]}" --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
 else
-
     # There are no additional feeder options to choose from.
     NO_FEEDER_OPTIONS_TITLE='All Feeders Installed'
     NO_FEEDER_OPTIONS_MESSAGE='It appears that all the optional feeders available for installation by this script have been installed already.'
-    whiptail --backtitle "$PROJECT_TITLE" --title "$NO_FEEDER_OPTIONS_TITLE" --msgbox "$NO_FEEDER_OPTIONS_MESSAGE" 0 0
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$NO_FEEDER_OPTIONS_TITLE" --msgbox "$NO_FEEDER_OPTIONS_MESSAGE" 0 0
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
 fi
 
 ## PORTAL DIALOGS
@@ -316,8 +361,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
     WEB_SERVER=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$WEB_SERVER_TITLE" --radiolist "$WEB_SERVER_MESSAGE" 0 0 0 \
                  "nginx" "Nginx" on \
                  "lighttpd" "lighthttpd" off --output-fd 1)
-    RESULT=$?
-    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+    if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
         exit 1
     fi
 
@@ -345,8 +389,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
         DATABASE_ENGINE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DATABASE_ENGINE_TITLE" --radiolist "$DATABASE_ENGINE_MESSAGE" 0 0 0 \
                           "sqlite" "SQLite" on \
                           "mysql" "MySQL/MariaDB" off --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
             exit 1
         fi
 
@@ -357,8 +400,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
             MYSQL_HOSTNAME_MESSAGE='Enter the hostname of the MySQL/MariaDB database server you will use to store historical flight data.\n\nIf set to localhost MySQL or MariaDB will be installed on this device and configured automatically. If this is a remote MySQL/MariaDB server the database and a user must already exist on said server.'
             while [ -z $MYSQL_HOSTNAME ] ; do
                 MYSQL_HOSTNAME=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_HOSTNAME_TITLE" --inputbox "$MYSQL_HOSTNAME_MESSAGE" 0 0 "localhost" --output-fd 1)
-                RESULT=$?
-                if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
                     exit 1
                 fi
                 MYSQL_HOSTNAME_TITLE='Enter the MySQL/MariaDB Hostname [REQUIRED]'
@@ -382,8 +424,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
                     MYSQL_ROOT_PASSWORD1_MESSAGE="Supply a password to be used for the root user."
                     while [ -z $MYSQL_ROOT_PASSWORD1 ] ; do
                         MYSQL_ROOT_PASSWORD1=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_ROOT_PASSWORD1_TITLE" --backtitle "$PROJECT_TITLE" --passwordbox "$MYSQL_ROOT_PASSWORD1_MESSAGE" 0 0 --output-fd 1)
-                        RESULT=$?
-                        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                        if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
                             exit 1
                         fi
                         MYSQL_ROOT_PASSWORD1_TITLE='Supply MySQL/MariaDB Root Password [REQUIRED]'
@@ -394,8 +435,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
                     MYSQL_ROOT_PASSWORD2_MESSAGE="Repeat the password to be used for the root user."
                     while [ -z $MYSQL_ROOT_PASSWORD2 ] ; do
                         MYSQL_ROOT_PASSWORD2=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_ROOT_PASSWORD2_TITLE" --backtitle "$PROJECT_TITLE" --passwordbox "$MYSQL_ROOT_PASSWORD2_MESSAGE" 0 0 --output-fd 1)
-                        RESULT=$?
-                        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                        if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
                             exit 1
                         fi
                         MYSQL_ROOT_PASSWORD2_TITLE='Repeat MySQL/MariaDB Root Password [REQUIRED]'
@@ -408,8 +448,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
             MYSQL_DATABASE_MESSAGE='Please supply the name of the database which will be used to store your receivers historical flight tracking data.'
             while [ -z $MYSQL_DATABASE ] ; do
                 MYSQL_DATABASE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_DATABASE_TITLE" --inputbox "$MYSQL_DATABASE_MESSAGE" 0 0 --output-fd 1)
-                RESULT=$?
-                if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
                     exit 1
                 fi
                 MYSQL_DATABASE_MESSAGE='MySQL/MariaDB Database Name [REQUIRED]'
@@ -420,8 +459,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
             MYSQL_USER_MESSAGE='Supply the name of the user which has permission to use this database.'
             while [ -z $MYSQL_USER ] ; do
                 MYSQL_USER=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_USER_TITLE" --inputbox "$MYSQL_USER_MESSAGE" 0 0 --output-fd 1)
-                RESULT=$?
-                if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
                     exit 1
                 fi
                 MYSQL_USER_MESSAGE='MySQL/MariaDB Database User Name [REQUIRED]'
@@ -442,8 +480,7 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
                     MYSQL_USER_PASSWORD1_TITLE='MySQL/MariaDB Database User Password'
                     MYSQL_USER_PASSWORD1_MESSAGE="Enter the database user's password."
                     MYSQL_USER_PASSWORD1=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$MYSQL_USER_PASSWORD1_TITLE" --backtitle "$PROJECT_TITLE" --passwordbox "$MYSQL_USER_PASSWORD1_MESSAGE" 0 0 --output-fd 1)
-                    RESULT=$?
-                    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                    if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
                         exit 1
                     fi
                     MYSQL_USER_PASSWORD1_MESSAGE='MySQL/MariaDB Database User Password [REQUIRED]'

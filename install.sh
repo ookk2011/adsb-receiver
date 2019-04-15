@@ -48,15 +48,15 @@ export PROJECT_BUILD_DIRECTORY="${PWD}/build"
 export PROJECT_TITLE="THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} INSTALLER"
 export PROJECT_LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
 
-export DUMP1090_FORK=''
+export DUMP1090_FORK
 export DUMP1090_INSTALLED='false'
 export DUMP1090_UPGRADEABLE='false'
 export DUMP1090_UPGRADE='false'
-export DUMP1090_DEVICE_ID='0'
+export DUMP1090_DEVICE_ID
 
 export DUMP978_INSTALLED='false'
 export DUMP978_UPGRADEABLE='false'
-export DUMP978_DEVICE_ID='1'
+export DUMP978_DEVICE_ID
 
 export ADSB_EXCHANGE_CONFIGURED='false'
 export ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED='false'
@@ -257,8 +257,17 @@ fi
 printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
 sleep 1
 
-chmod +x ${PROJECT_BASH_DIRECTORY}/main.sh 2>&1 >/dev/null
+
+
+# Run init.sh.
+chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
+${PROJECT_BASH_DIRECTORY}/init.sh
+
+# Run main.sh.
+chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
 ${PROJECT_BASH_DIRECTORY}/main.sh
+
+
 
 echo -e "${COLOR_PURPLE}Setup process complete.\n"
 
