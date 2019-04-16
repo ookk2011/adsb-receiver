@@ -269,14 +269,14 @@ if [ "$ADSB_EXCHANGE_CONFIGURED" == 'false' ] || [ "$ADSB_EXCHANGE_MLAT_CLIENT_I
     if [ "$ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE" == 'true' ] ; then
         ADSB_EXCHANGE_FEEDER_OPTION="${ADSB_EXCHANGE_MLAT_CLIENT_OPTION} \(UPGRADE\)"
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${ADSB_EXCHANGE_FEEDER_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_OPTIONS[@]}" "${ADSB_EXCHANGE_FEEDER_OPTION}" '' OFF)
 fi
 
 # ADSBHub
 
 if [ "$ADSBHUB_INSTALLED" == 'false' ] || [ "$ADSBHUB_CONFIGURED" == 'false' ] ; then
     ADSBHUB_OPTION='ADSBHub'
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${ADSBHUB_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_OPTIONS[@]}" "${ADSBHUB_OPTION}" '' OFF)
 fi
 
 # FR24Feed (flightradar24)
@@ -287,13 +287,13 @@ if [ "$FR24FEED_PACKAGE_INSTALLED" == 'false' ] || [ "$FR24FEED_PACKAGE_UPGRADEA
     if [ "$FR24FEED_PACKAGE_UPGRADEABLE" == 'true' ] ; then
         FR24FEED_OPTION='Flightradar24 FR24Feed (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${FR24FEED_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_OPTIONS[@]}" "${FR24FEED_OPTION}" '' OFF)
 fi
 
 
 if [ "$OPENSKY_FEEDER_INSTALLED" == "false" ] ; then
     OPENSKY_OPTION='OpenSky Network Feeder'
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${OPENSKY_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_OPTIONS[@]}" "${OPENSKY_OPTION}" '' OFF)
 fi
 
 # PiAware (FlightAware)
@@ -304,19 +304,19 @@ if [ "$PIAWARE_INSTALLED" == 'false' ] || [ "$PIAWARE_UPGRADEABLE" == 'true' ] ;
     if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
         PIAWARE_OPTION='FlightAware PiAware (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${PIAWARE_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_OPTIONS[@]}" "${PIAWARE_OPTION}" '' OFF)
 fi
 
 # Plane Finder ADS-B Client (planefinder)
 
 if [ "PLANEFINDER_CLIENT_INSTALLED" == 'false' ] || [ "$PLANEFINDER_CLIENT_UPGRADEABLE" == 'true' ] ; then
-    if [ "$PIAWARE_INSTALLED" == 'false' ] ; then
-        PIAWARE_OPTION='Planefinder Client'
+    if [ "$PLANEFINDER_CLIENT_INSTALLED" == 'false' ] ; then
+        PLANEFINDER_CLIENT_OPTION='Planefinder Client'
     fi
-    if [ "$PIAWARE_UPGRADEABLE" == 'true' ] ; then
-        PIAWARE_OPTION='Planefinder Client (UPGRADE)'
+    if [ "$PLANEFINDER_CLIENT_UPGRADEABLE" == 'true' ] ; then
+        PLANEFINDER_CLIENT_OPTION='Planefinder Client (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${PFCLIENT_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${PLANEFINDER_CLIENT_OPTION}" '' OFF)
 fi
 
 # Display feeder options.

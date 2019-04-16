@@ -36,6 +36,8 @@
 
 ## EXPORT VARIABLES
 
+FAILED='false'
+
 export DEVICE_CPU_ARCHITECTURE=`uname -m`
 export DEVICE_OS_DISTRIBUTION=`. /etc/os-release; echo ${ID/*, /}`
 export DEVICE_OS_RELEASE=`. /etc/os-release; echo ${VERSION_ID/*, /}`
@@ -62,8 +64,20 @@ export ADSB_EXCHANGE_CONFIGURED='false'
 export ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED='false'
 export ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE='false'
 
+export ADSBHUB_INSTALLED='false'
+export ADSBHUB_CONFIGURED='false'
+
+export FR24FEED_PACKAGE_INSTALLED='false'
+export FR24FEED_PACKAGE_UPGRADEABLE='false'
+
+export OPENSKY_FEEDER_INSTALLED='false'
+
 export PIAWARE_INSTALLED='false'
 export PIAWARE_UPGRADEABLE='false'
+
+export PLANEFINDER_CLIENT_INSTALLED='false'
+export PLANEFINDER_CLIENT_UPGRADEABLE='false'
+export PLANEFINDER_CLIENT_ARCHITECTURE
 
 export COLOR_BLUE='\e[0;34m'
 export COLOR_GREEN='\e[0;32m'
@@ -73,6 +87,60 @@ export COLOR_LIGHT_GREEN='\e[1;32m'
 export COLOR_PURPLE='\e[0;35m'
 export COLOR_RED='\e[0;31m'
 export COLOR_YELLOW='\e[1;33m'
+
+function UnsetVariables {
+    unset DEVICE_CPU_ARCHITECTURE
+    unset DEVICE_OS_DISTRIBUTION
+    unset DEVICE_OS_RELEASE
+
+    unset PROJECT_THIS_VERSION
+    unset PROJECT_CURRENT_VERSION
+    unset PROJECT_BRANCH
+    unset PROJECT_ROOT_DIRECTORY
+    unset PROJECT_BASH_DIRECTORY
+    unset PROJECT_BUILD_DIRECTORY
+    unset PROJECT_TITLE
+    unset PROJECT_LOG_FILE
+
+    unset DUMP1090_FORK
+    unset DUMP1090_INSTALLED
+    unset DUMP1090_UPGRADEABLE
+    unset DUMP1090_UPGRADE
+    unset DUMP1090_DEVICE_ID
+
+    unset DUMP978_INSTALLED
+    unset DUMP978_UPGRADEABLE
+    unset DUMP978_DEVICE_ID
+
+    unset ADSBHUB_INSTALLED
+    unset ADSBHUB_CONFIGURED
+
+    unset FR24FEED_PACKAGE_INSTALLED
+    unset FR24FEED_PACKAGE_UPGRADEABLE
+
+    unset FR24FEED_PACKAGE_INSTALLED
+    unset FR24FEED_PACKAGE_UPGRADEABLE
+
+    unset OPENSKY_FEEDER_INSTALLED
+
+    unset PIAWARE_INSTALLED
+    unset PIAWARE_UPGRADEABLE
+
+    unset PLANEFINDER_CLIENT_INSTALLED
+    unset PLANEFINDER_CLIENT_UPGRADEABLE
+    unset PLANEFINDER_CLIENT_ARCHITECTURE
+
+    unset COLOR_BLUE
+    unset COLOR_GREEN
+    unset COLOR_LIGHT_BLUE
+    unset COLOR_LIGHT_GRAY
+    unset COLOR_LIGHT_GREEN
+    unset COLOR_PURPLE
+    unset COLOR_RED
+    unset COLOR_YELLOW
+
+    unset NCURSES_NO_UTF8_ACS
+}
 
 # PuTTY does not display dialog borders properly when the locale is set to UTF-8. (This fixes the issue.)
 export NCURSES_NO_UTF8_ACS=1
@@ -158,6 +226,7 @@ while [ $# -gt 0 ] ; do
         # Display the help message and exit.
         -h|--help)
             DisplayHelp
+            UnsetVariables
             exit 0
             ;;
 
@@ -257,17 +326,19 @@ fi
 printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
 sleep 1
 
-
-
 # Run init.sh.
 chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
 ${PROJECT_BASH_DIRECTORY}/init.sh
+if [ $? -ne 0 ] ; then
+    FAILED='true'
+fi
 
 # Run main.sh.
 chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
 ${PROJECT_BASH_DIRECTORY}/main.sh
-
-
+if [ $? -ne 0 ] ; then
+    FAILED='true'
+fi
 
 echo -e "${COLOR_PURPLE}Setup process complete.\n"
 
@@ -285,48 +356,12 @@ SETUP_COMPLETE_SUCCESS="\n${COLOR_GREEN}Setup completed successfully.${COLOR_LIG
 
 # Unset any variables exported by this script.
 echo -e "${COLOR_BLUE}Unsetting any exported variables pertaining to the setup process...${COLOR_LIGHT_GRAY}"
-
-unset DEVICE_CPU_ARCHITECTURE
-unset DEVICE_OS_DISTRIBUTION
-unset DEVICE_OS_RELEASE
-
-unset PROJECT_THIS_VERSION
-unset PROJECT_CURRENT_VERSION
-unset PROJECT_BRANCH
-unset PROJECT_ROOT_DIRECTORY
-unset PROJECT_BASH_DIRECTORY
-unset PROJECT_BUILD_DIRECTORY
-unset PROJECT_TITLE
-unset PROJECT_LOG_FILE
-
-unset DUMP1090_FORK
-unset DUMP1090_INSTALLED
-unset DUMP1090_UPGRADEABLE
-unset DUMP1090_UPGRADE
-unset DUMP1090_DEVICE_ID
-
-unset DUMP978_INSTALLED
-unset DUMP978_UPGRADEABLE
-unset DUMP978_DEVICE_ID
-
-unset PIAWARE_INSTALLED
-unset PIAWARE_UPGRADEABLE
-
-unset COLOR_BLUE
-unset COLOR_GREEN
-unset COLOR_LIGHT_BLUE
-unset COLOR_LIGHT_GRAY
-unset COLOR_LIGHT_GREEN
-unset COLOR_PURPLE
-unset COLOR_RED
-unset COLOR_YELLOW
-
-unset NCURSES_NO_UTF8_ACS
+UnsetVariables
 
 ## EXIT
 
 # Check if any errors were encountered by any of the child scripts.
-if [ $? -ne 0 ] ; then
+if [ $FAILED == 'true' ] ; then
     echo -e "$SETUP_COMPLETE_ERROR"
     exit 1
 else

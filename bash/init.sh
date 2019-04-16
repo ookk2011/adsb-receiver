@@ -122,14 +122,10 @@ fi
 
 ## ADSBHUB STATUS
 
-ADSBHUB_INSTALLED='false'
-
 # Check that the ADSBHub script is present on this device.
 if [ -f ${PROJECT_BUILD_DIRECTORY}/adsbhub/adsbhub.sh ] ; then
     ADSBHUB_INSTALLED='true'
 fi
-
-ADSBHUB_CONFIGURED='false'
 
 # Check if ADSBHub script exists and is configured properly.
 if [ -f /etc/rc.local ] ; then
@@ -140,9 +136,6 @@ if [ -f /etc/rc.local ] ; then
 fi
 
 ## FR24FEED STATUS
-
-FR24FEED_PACKAGE_INSTALLED='false'
-FR24FEED_PACKAGE_UPGRADABLE='false'
 
 # Check if Flightradar24 Feeder is installed.
 if [ $(dpkg-query -W -f='${STATUS}' fr24feed 2>/dev/null | grep -c "ok installed") -eq 1 ] ; then
@@ -159,17 +152,12 @@ fi
 
 ## OPENSKY FEEDER STATUS
 
-OPENSKY_FEEDER_INSTALLED='false'
-
 # Check if OpenSky Feeder is installed.
 if [ $(dpkg-query -W -f='${STATUS}' opensky-feeder 2>/dev/null | grep -c "ok installed") -eq 1 ] ; then
     OPENSKY_FEEDER_INSTALLED='true'
 fi
 
 ## PIAWARE STATUS
-
-PIAWARE_INSTALLED='false'
-PIAWARE_UPGRADEABLE='false'
 
 # Check if PiAware is installed and if an upgrade is available.
 if [ $(dpkg-query -W -f='${STATUS}' piaware 2>/dev/null | grep -c "ok installed") -eq 1 ] ; then
@@ -181,9 +169,6 @@ if [ $(dpkg-query -W -f='${STATUS}' piaware 2>/dev/null | grep -c "ok installed"
 fi
 
 ## PLANEFINDER CLIENT STATUS
-
-PLANEFINDER_CLIENT_INSTALLED='false'
-PLANEFINDER_CLIENT_UPGRADEABLE='false'
 
 if [ $(dpkg-query -W -f='${STATUS}' pfclient 2>/dev/null | grep -c "ok installed") -eq 1 ] ; then
     PLANEFINDER_CLIENT_INSTALLED='true'
