@@ -50,35 +50,6 @@ export PROJECT_BUILD_DIRECTORY="${PWD}/build"
 export PROJECT_TITLE="THE ADS-B RECIEVER PROJECT V${PROJECT_THIS_VERSION} INSTALLER"
 export PROJECT_LOG_FILE="${PROJECT_ROOT_DIRECTORY}/logs/install_$(date +"%Y-%m-%d_%H-%M-%S").log"
 
-export DUMP1090_FORK
-export DUMP1090_INSTALLED='false'
-export DUMP1090_UPGRADEABLE='false'
-export DUMP1090_UPGRADE='false'
-export DUMP1090_DEVICE_ID
-
-export DUMP978_INSTALLED='false'
-export DUMP978_UPGRADEABLE='false'
-export DUMP978_DEVICE_ID
-
-export ADSB_EXCHANGE_CONFIGURED='false'
-export ADSB_EXCHANGE_MLAT_CLIENT_INSTALLED='false'
-export ADSB_EXCHANGE_MLAT_CLIENT_UPGRADEABLE='false'
-
-export ADSBHUB_INSTALLED='false'
-export ADSBHUB_CONFIGURED='false'
-
-export FR24FEED_PACKAGE_INSTALLED='false'
-export FR24FEED_PACKAGE_UPGRADEABLE='false'
-
-export OPENSKY_FEEDER_INSTALLED='false'
-
-export PIAWARE_INSTALLED='false'
-export PIAWARE_UPGRADEABLE='false'
-
-export PLANEFINDER_CLIENT_INSTALLED='false'
-export PLANEFINDER_CLIENT_UPGRADEABLE='false'
-export PLANEFINDER_CLIENT_ARCHITECTURE
-
 export COLOR_BLUE='\e[0;34m'
 export COLOR_GREEN='\e[0;32m'
 export COLOR_LIGHT_BLUE='\e[1;34m'
@@ -102,34 +73,6 @@ function UnsetVariables {
     unset PROJECT_TITLE
     unset PROJECT_LOG_FILE
 
-    unset DUMP1090_FORK
-    unset DUMP1090_INSTALLED
-    unset DUMP1090_UPGRADEABLE
-    unset DUMP1090_UPGRADE
-    unset DUMP1090_DEVICE_ID
-
-    unset DUMP978_INSTALLED
-    unset DUMP978_UPGRADEABLE
-    unset DUMP978_DEVICE_ID
-
-    unset ADSBHUB_INSTALLED
-    unset ADSBHUB_CONFIGURED
-
-    unset FR24FEED_PACKAGE_INSTALLED
-    unset FR24FEED_PACKAGE_UPGRADEABLE
-
-    unset FR24FEED_PACKAGE_INSTALLED
-    unset FR24FEED_PACKAGE_UPGRADEABLE
-
-    unset OPENSKY_FEEDER_INSTALLED
-
-    unset PIAWARE_INSTALLED
-    unset PIAWARE_UPGRADEABLE
-
-    unset PLANEFINDER_CLIENT_INSTALLED
-    unset PLANEFINDER_CLIENT_UPGRADEABLE
-    unset PLANEFINDER_CLIENT_ARCHITECTURE
-
     unset COLOR_BLUE
     unset COLOR_GREEN
     unset COLOR_LIGHT_BLUE
@@ -141,51 +84,6 @@ function UnsetVariables {
 
     unset NCURSES_NO_UTF8_ACS
 }
-
-# PuTTY does not display dialog borders properly when the locale is set to UTF-8. (This fixes the issue.)
-export NCURSES_NO_UTF8_ACS=1
-
-## SOURCE EXTERNAL SCRIPTS
-
-source ${PROJECT_BASH_DIRECTORY}/functions.sh
-
-## DISPLAY PROJECT TITLE AND VERSION
-
-clear
-echo -e "\n${COLOR_LIGHT_GREEN}---------------------------------------------"
-echo -e " $PROJECT_TITLE"
-echo -e "${COLOR_LIGHT_GREEN}---------------------------------------------\n"
-
-## CHECK FOR REQUIRED PACKAGES
-
-# Make sure that the packages needed in order fot the scripts to run properly are installed first.
-echo -e "${COLOR_LIGHT_BLUE}Check for required packages.${COLOR_LIGHT_GRAY}\n"
-
-# Check if apt update was ran successfully within the last hour or if the user specified the command should be ran.
-if [ `stat -c %Y /var/cache/apt/pkgcache.bin` -lt $((`date +%s` - 3600)) ] || [ ! -z $FORCE_APT_UPDATE ] && [ "$FORCE_APT_UPDATE" == 'true' ] ; then
-    # Run the apt update command.
-    echo -e "${COLOR_BLUE}Updating apt package lists...${COLOR_LIGHT_GRAY}\n"
-    sudo apt-get update
-    echo ''
-fi
-
-if [ ! -z $EXECUTE_APT_UPGRADE ] && [ "$EXECUTE_APT_UPGRADE" == 'true' ] ; then
-    # Run the apt upgrade command.
-    echo -e "${COLOR_BLUE}Upgrading your system using apt...${COLOR_LIGHT_GRAY}\n"
-    sudo apt-get -y upgrade
-    echo ''
-fi
-
-# Check that any required packages are installed and if not install them.
-CheckPackage bc
-CheckPackage curl
-CheckPackage dialog
-CheckPackage git
-
-## EXPORT REMAINING VARIABLES
-
-# Variables get the current release version number from the Internet if possible..
-export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/version.txt)" || PROJECT_CURRENT_VERSION='NA'
 
 ## FUNCTIONS
 
@@ -238,6 +136,51 @@ while [ $# -gt 0 ] ; do
 
     esac
 done
+
+# PuTTY does not display dialog borders properly when the locale is set to UTF-8. (This fixes the issue.)
+export NCURSES_NO_UTF8_ACS=1
+
+## SOURCE EXTERNAL SCRIPTS
+
+source ${PROJECT_BASH_DIRECTORY}/functions.sh
+
+## DISPLAY PROJECT TITLE AND VERSION
+
+clear
+echo -e "\n${COLOR_LIGHT_GREEN}---------------------------------------------"
+echo -e " $PROJECT_TITLE"
+echo -e "${COLOR_LIGHT_GREEN}---------------------------------------------\n"
+
+## CHECK FOR REQUIRED PACKAGES
+
+# Make sure that the packages needed in order fot the scripts to run properly are installed first.
+echo -e "${COLOR_LIGHT_BLUE}Check for required packages.${COLOR_LIGHT_GRAY}\n"
+
+# Check if apt update was ran successfully within the last hour or if the user specified the command should be ran.
+if [ `stat -c %Y /var/cache/apt/pkgcache.bin` -lt $((`date +%s` - 3600)) ] || [ ! -z $FORCE_APT_UPDATE ] && [ "$FORCE_APT_UPDATE" == 'true' ] ; then
+    # Run the apt update command.
+    echo -e "${COLOR_BLUE}Updating apt package lists...${COLOR_LIGHT_GRAY}\n"
+    sudo apt-get update
+    echo ''
+fi
+
+if [ ! -z $EXECUTE_APT_UPGRADE ] && [ "$EXECUTE_APT_UPGRADE" == 'true' ] ; then
+    # Run the apt upgrade command.
+    echo -e "${COLOR_BLUE}Upgrading your system using apt...${COLOR_LIGHT_GRAY}\n"
+    sudo apt-get -y upgrade
+    echo ''
+fi
+
+# Check that any required packages are installed and if not install them.
+CheckPackage bc
+CheckPackage curl
+CheckPackage dialog
+CheckPackage git
+
+## EXPORT REMAINING VARIABLES
+
+# Variables get the current release version number from the Internet if possible..
+export PROJECT_CURRENT_VERSION="$(curl -s -L https://www.adsbreceiver.net/version.txt)" || PROJECT_CURRENT_VERSION='NA'
 
 ## PREPARE REPOSITORY
 
@@ -326,13 +269,6 @@ fi
 printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
 sleep 1
 
-# Run init.sh.
-chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
-${PROJECT_BASH_DIRECTORY}/init.sh
-if [ $? -ne 0 ] ; then
-    FAILED='true'
-fi
-
 # Run main.sh.
 chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
 ${PROJECT_BASH_DIRECTORY}/main.sh
@@ -340,7 +276,7 @@ if [ $? -ne 0 ] ; then
     FAILED='true'
 fi
 
-echo -e "${COLOR_PURPLE}Setup process complete.\n"
+echo -e "\n${COLOR_PURPLE}Setup process complete.\n"
 
 ## CLEAN UP
 
@@ -351,7 +287,7 @@ CleanLogFile $LOG_FILE
 echo -e "${COLOR_BLUE}Log file was saved to ${LOG_FILE}."
 
 # Set the exit messages before unsetting the color variables.
-SETUP_COMPLETE_ERROR="\n${COLOR_RED}Setup halted due to errors.${COLOR_LIGHT_GRAY}\n"
+SETUP_COMPLETE_ERROR="\n${COLOR_RED}Setup halted due users choosing or errors.${COLOR_LIGHT_GRAY}\n"
 SETUP_COMPLETE_SUCCESS="\n${COLOR_GREEN}Setup completed successfully.${COLOR_LIGHT_GRAY}\n"
 
 # Unset any variables exported by this script.

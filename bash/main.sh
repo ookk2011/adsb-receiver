@@ -33,24 +33,10 @@
 
 ## SOURCE EXTERNAL SCRIPTS
 
+source ${PROJECT_BASH_DIRECTORY}/init.sh
 source ${PROJECT_BASH_DIRECTORY}/variables.sh
 source ${PROJECT_BASH_DIRECTORY}/functions.sh
 
-## VARIABLES
-
-#FEEDERS
-#WEB_SERVER
-#SAVE_FLIGHT_DATA
-#DATABASE_ENGINE
-#MYSQL_HOSTNAME
-#MYSQL_ROOT_PASSWORD1
-#MYSQL_ROOT_PASSWORD2
-#MYSQL_DATABASE
-#MYSQL_USER
-#MYSQL_USER_PASSWORD1
-#MYSQL_USER_PASSWORD2
-
-## --------------
 ## WELCOME DIALOG
 
 WELCOME_TITLE='Welcome'
@@ -60,15 +46,7 @@ if [ $? -eq 255 ] ; then
     exit 1
 fi
 
-## ----------------
 ## DUMP1090 DIALOGS
-
-if [ "$DUMP1090_INSTALLED" == 'true' ] && [ "$DUMP1090_FORK" == 'dump1090-mutability' ] && [ -s /etc/default/dump1090-mutability ] ; then
-    # If dump1090-mutability selected or is already installed get variable values from its configuration file.
-    RECIEVER_LATITUDE=`GetConfig "LAT" "/etc/default/dump1090-mutability"`
-    RECEIVER_LONGITUDE=`GetConfig "LON" "/etc/default/dump1090-mutability"`
-    BING_MAPS_API_KEY=`GetConfig "BingMapsAPIKey" "/usr/share/dump1090-mutability/html/config.js"`
-fi
 
 if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
 
@@ -84,119 +62,23 @@ if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
     if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
         exit 1
     fi
-
-    # If dump1090-fa was selected inform the user PiAware will be installed as well.
-    if [ "$DUMP1090_FORK" == 'dump1090-fa' ] ; then
-        PIAWARE_REQUIRED_TITLE='PiAware Required'
-        PIAWARE_REQUIRED_MESSAGE="Regarding the FlightAware fork of Dump1090...\n\nThe PiAware software package, which is used to forward ADS-B data to FlightAware, is required in order to use FlightAware's fork of Dump1090. For this reason PiAware will be installed automatically during the setup process."
-        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$PIAWARE_REQUIRED_TITLE" --msgbox "$PIAWARE_REQUIRED_MESSAGE" 0 0
-        if [ $? -eq 255 ] ; then
-            exit 1
-        fi
-    fi
-else
-
-    # A fork of Dump1090 is installed.
-
-    # If an upgrade is available ask if the newer version should be installed.
-    if [ "$DUMP1090_UPGRADEABLE" == 'true' ] ; then
-
-        # Dump1090 (Mutability) new code is no longer versioned so a different question must be asked.
-        if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] || [ "$DUMP1090_FORK" == 'dump1090-hptoa'] ; then
-            # If Dump1090 (Mutability) or Dump1090 (HPTOA) is installed ask if the user wants to build the current repository master branch contents.
-            if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] ; then
-                UPGRADE_DUMP1090_TITLE='Update Dump1090 (Mutability)'
-                UPGRADE_DUMP1090_MESSAGE="As of v1.15~dev the version number has not changed. However, the source code for the application continues to be worked on. If you wish the repository located locally on this device can be updated and recompiled to ensure you are running the Dump1090 (Mutability) with the latest changes.\n\nUpdate source code and recompile/install Dump1090 (Mutability)?"
-            fi
-            if [ "$DUMP1090_FORK" == 'dump1090-hptoa' ] ; then
-                UPGRADE_DUMP1090_TITLE='Update Dump1090 (HPTOA)'
-                UPGRADE_DUMP1090_MESSAGE="As of this moment there have been no releases made specifically for Dump1090 (HPTOA). However, the source code for the application may have changed but with no versioning it is hard to tell if these changes, if any, are reflected in the binaries currently compiled on your device. If you wish the repository located locally on this device can be updated and recompiled to ensure you are running the Dump1090 (HPTOA) with the latest changes.\n\nUpdate source code and recompile Dump1090 (HPTOA)?"
-            fi
-            dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP1090_TITLE" --yesno "$UPGRADE_DUMP1090_MESSAGE" 0 0
-            case $? in
-                0) UPGRADE_DUMP1090='true' ;;
-                1) UPGRADE_DUMP1090='false' ;;
-                255) exit 1 ;;
-            esac
-        else
-            # Ask if any other version of Dump1090 should be upgraded if a new version is available.
-            UPGRADE_DUMP1090_TITLE='Update Dump1090 (FlightAware)'
-            UPGRADE_DUMP1090_MESSAGE="A newer version of Dump1090 (FlightAware) is available.\n\nWould you like to upgrade Dump1090 (FlightAware) now?"
-            dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP1090_TITLE" --yesno "$UPGRADE_DUMP1090_MESSAGE" 0 0
-            case $? in
-                0) UPGRADE_DUMP1090='true' ;;
-                1) UPGRADE_DUMP1090='false' ;;
-                255) exit 1 ;;
-            esac
-
-        fi
-    else
-
-        # It appears Dump1090 is installed and up to date.
-        DUMP1090_INSTALLED_TITLE='Dump1090 Installed'
-        DUMP1090_INSTALLED_MESSAGE='Dump1090 appears to already be installed on this device and according to our records up to date.'
-        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$WELCOME_TITLE" --msgbox "$WELCOME_MESSAGE" 0 0
-        if [ $? -eq 255 ] ; then
-            exit 1
-        fi
-    fi
 fi
 
-# Ask for information needed to configure dump1090-mutability.
-if [ "$DUMP1090_FORK" == 'dump1090-mutability' ] ; then
+case $DUMP1090_FORK in
+    'dump1090-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-mutability.sh ;;
+    'dump1090-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-fa.sh ;;
+    'dump1090-hptoa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-hptoa.sh ;;
+esac
 
-    RECIEVER_LATITUDE_TITLE='Receiver Latitude'
-    RECIEVER_LATITUDE_MESSAGE="Enter your receiver's latitude.\n(Example: XX.XXXXXXX)"
-    while [ -z $RECIEVER_LATITUDE ] ; do
-        RECIEVER_LATITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECIEVER_LATITUDE_TITLE" --inputbox "$RECIEVER_LATITUDE_MESSAGE" 0 0 "$RECIEVER_LATITUDE" --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-            exit 1
-        fi
-        RECIEVER_LATITUDE_TITLE='Receiver Latitude [REQUIRED]'
-    done
+# Display Dump1090 setup dialogs.
+dialogs $DUMP1090_INSTALLED $DUMP1090_UPGRADEABLE
 
-    RECIEVER_LONGITUDE_TITLE='Receiver Longitude'
-    RECIEVER_LONGITUDE_MESSAGE="Enter your receeiver's longitude.\n(Example: XX.XXXXXXX)"
-    while [ -z $RECIEVER_LONGITUDE ] ; do
-        RECIEVER_LONGITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECIEVER_LONGITUDE_TITLE" --inputbox "$RECIEVER_LONGITUDE_MESSAGE" 0 0 "$RECIEVER_LONGITUDE" --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-            exit 1
-        fi
-        RECIEVER_LONGITUDE_TITLE='Receiver Longitude [REQUIRED]'
-    done
 
-    DUMP1090_MAX_RANGE_TITLE='Dump1090-mutability Maximum Range'
-    DUMP1090_MAX_RANGE_MESSAGE='The dump1090-mutability default maximum range value of 300 nmi (~550km) has been reported to be below what is possible under the right conditions, so this value will be increased to 360 nmi (~660 km) to match the value used by the dump1090-fa fork.'
-    while [ -z $DUMP1090_MAX_RANGE ] ; do
-        DUMP1090_MAX_RANGE='360'
-        DUMP1090_MAX_RANGE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_MAX_RANGE_TITLE" --inputbox "$DUMP1090_MAX_RANGE_MESSAGE" 0 0 "$DUMP1090_MAX_RANGE" --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-            exit 1
-        fi
-        RECIEVER_LATITUDE_TITLE='Dump1090-mutability Maximum Range [REQUIRED]'
-    done
 
-    BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE='Bind dump1090-mutability To All IP Addresses'
-    BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE="By default dump1090-mutability is bound only to the local loopback IP address(s) for security reasons. However some people wish to make dump1090-mutability's data accessable externally by other devices. To allow this dump1090-mutability can be configured to listen on all IP addresses bound to this device. It is recommended that unless you plan to access this device from an external source that dump1090-mutability remain bound only to the local loopback IP address(s).\n\nWould you like dump1090-mutability to listen on all IP addesses?"
-    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE" --yesno "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE" 0 0
-    case $? in
-        0) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='true' ;;
-        1) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='false' ;;
-        255) exit 1 ;;
-    esac
+# STOPPING HERE FOR TESTING PURPOSES
+exit 0
 
-    UNIT_OF_MEASURMENT_TITLE='Select Dump1090 Unit of Measurement'
-    UNIT_OF_MEASURMENT_MESSAGE='Please select the unit of measurement to be used by dump1090-mutability.'
-    dialog  --keep-tite --backtitle "$PROJECT_TITLE" --title "$UNIT_OF_MEASURMENT_TITLE" --yes-button "Imperial" --no-button "Metric" --yesno "$UNIT_OF_MEASURMENT_MESSAGE" 0 0
-    case $? in
-        0) UNIT_OF_MEASURMENT='imperial' ;;
-        1) UNIT_OF_MEASURMENT='metric' ;;
-        255) exit 1 ;;
-    esac
-fi
+
 
 ## ---------------
 ## DUMP978 DIALOGS
@@ -309,14 +191,14 @@ fi
 
 # Plane Finder ADS-B Client (planefinder)
 
-if [ "PLANEFINDER_CLIENT_INSTALLED" == 'false' ] || [ "$PLANEFINDER_CLIENT_UPGRADEABLE" == 'true' ] ; then
+if [ "$PLANEFINDER_CLIENT_INSTALLED" == 'false' ] || [ "$PLANEFINDER_CLIENT_UPGRADEABLE" == 'true' ] ; then
     if [ "$PLANEFINDER_CLIENT_INSTALLED" == 'false' ] ; then
         PLANEFINDER_CLIENT_OPTION='Planefinder Client'
     fi
     if [ "$PLANEFINDER_CLIENT_UPGRADEABLE" == 'true' ] ; then
         PLANEFINDER_CLIENT_OPTION='Planefinder Client (UPGRADE)'
     fi
-    FEEDER_OPTIONS=("${FEEDER_LIST[@]}" "${PLANEFINDER_CLIENT_OPTION}" '' OFF)
+    FEEDER_OPTIONS=("${FEEDER_OPTIONS[@]}" "${PLANEFINDER_CLIENT_OPTION}" '' OFF)
 fi
 
 # Display feeder options.
@@ -364,12 +246,6 @@ if [ "$INSTALL_PORTAL" == 'true' ] ; then
     if [ $? -eq 255 ] || [ $? -eq 1 ] ; then
         exit 1
     fi
-
-
-
-    # Ask if heywhatsthat.com range rings should be added.
-
-
 
     # Choose whether or not to save flight data.
     SAVE_FLIGHT_DATA_TITLE='Enable Historical Flight Data Collection'

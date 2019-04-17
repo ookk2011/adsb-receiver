@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #####################################################################################
-#                                  ADS-B RECEIVER                                   #
+#                            THE ADS-B RECEIVER PROJECT                             #
 #####################################################################################
 #                                                                                   #
 # This script is not meant to be executed directly.                                 #
@@ -9,7 +9,7 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                                                                                   #
-# Copyright (c) 2016-2017, Joseph A. Prochazka & Romeo Golf                         #
+# Copyright (c) 2016-2019, Joseph A. Prochazka & Romeo Golf                         #
 #                                                                                   #
 # Permission is hereby granted, free of charge, to any person obtaining a copy      #
 # of this software and associated documentation files (the "Software"), to deal     #
@@ -75,28 +75,22 @@ function CheckPackage {
     done
 }
 
-function CleanLogFile {
-    # Use sed to remove any color sequences from the specified file..
-    sed -i "s,\x1B\[[0-9;]*[a-zA-Z],,g" $1
-}
-
-
-#################################################################################
 # Change a setting in a configuration file.
-# The function expects 3 parameters to be passed to it in the following order.
-# ChangeConfig KEY VALUE FILE
-
 function ChangeConfig {
     # Use sed to locate the "KEY" then replace the "VALUE", the portion after the equals sign, in the specified "FILE".
     # This function should work with any configuration file with settings formated as KEY="VALUE".
     sudo sed -i -e "s/\($1 *= *\).*/\1\"$2\"/" $3
 }
 
+# Retrieve a setting from a configuration file.
 function GetConfig {
     # Use sed to locate the "KEY" then read the "VALUE", the portion after the equals sign, in the specified "FILE".
     # This function should work with any configuration file with settings formated as KEY="VALUE".
     echo `sed -n "/^$1 *= *\"\(.*\)\"$/s//\1/p" $2`
 }
+
+
+
 
 function CommentConfig {
     if [[ ! `grep -cFx "#${1}" $2` -gt 0 ]] ; then

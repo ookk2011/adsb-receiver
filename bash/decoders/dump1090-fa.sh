@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #####################################################################################
-#                                  ADS-B RECEIVER                                   #
+#                            THE ADS-B RECEIVER PROJECT                             #
 #####################################################################################
 #                                                                                   #
 # This script is not meant to be executed directly.                                 #
@@ -9,7 +9,7 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 #                                                                                   #
-# Copyright (c) 2015-2016 Joseph A. Prochazka                                       #
+# Copyright (c) 2015-2019 Joseph A. Prochazka                                       #
 #                                                                                   #
 # Permission is hereby granted, free of charge, to any person obtaining a copy      #
 # of this software and associated documentation files (the "Software"), to deal     #
@@ -31,275 +31,211 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-### VARIABLES
+## DIALOGS
 
-RECEIVER_ROOT_DIRECTORY="${PWD}"
-RECEIVER_BASH_DIRECTORY="${RECEIVER_ROOT_DIRECTORY}/bash"
-RECEIVER_BUILD_DIRECTORY="${RECEIVER_ROOT_DIRECTORY}/build"
+function dialogs {
 
-### INCLUDE EXTERNAL SCRIPTS
+    # Assign parameters passed to this function to variables.
+    DUMP1090_INSTALLED=$1
+    UPGRADE_AVAILABLE=$1
 
-source ${RECEIVER_BASH_DIRECTORY}/variables.sh
-source ${RECEIVER_BASH_DIRECTORY}/functions.sh
+    # Needs to return the folowing variables...
+    # -----------------------------------------
+    # INSTALL_DUMP1090
+    # ADD_HEYWHATSTHAT_RINGS
+    # HEYWHATSTHAT_PANARAMA_ID
+    # HEYWHATSTHAT_RING_ONE_ALTITUDE
+    # HEYWHATSTHAT_RING_TWO_ALTITUDE
+    # BING_MAPS_API_KEY
 
-## SET INSTALLATION VARIABLES
+    if [ "$DUMP1090_INSTALLED" == 'false' ] || [ "$UPGRADE_AVAILABLE" == "true" ] ; then
+        if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
 
-# Source the automated install configuration file if this is an automated installation.
-if [[ "${RECEIVER_AUTOMATED_INSTALL}" = "true" ]] && [[ -s "${RECEIVER_CONFIGURATION_FILE}" ]] ; then
-    source ${RECEIVER_CONFIGURATION_FILE}
-else
-    DUMP1090_BING_MAPS_KEY=`GetConfig "BingMapsAPIKey" "/usr/share/dump1090-mutability/html/config.js"`
-fi
+            # This would be a clean installation of dump1090-fa.
+            INSTALL_DUMP1090_TITLE='Install dump1090-fa'
+            INSTALL_DUMP1090_MESSAGE="Dump 1090 is a Mode-S decoder specifically designed for RTL-SDR devices. Dump1090-fa is a fork of the dump1090-mutability version of dump1090 that is specifically designed for FlightAware's PiAware software.\n\nIn order to use this version of dump1090 FlightAware's PiAware software must be installed as well.\n\n  https://github.com/flightaware/dump1090\n\nContinue setup by installing dump1090-fa?"
+        else
 
-### BEGIN SETUP
+            # An upgrade is available for dump1090-fa.
+            INSTALL_DUMP1090_TITLE='Upgrade Available for Dump1090 (FlightAware)'
+            INSTALL_DUMP1090_MESSAGE="A newer version of Dump1090-fa is available.\n\nWould you like to upgrade Dump1090-fa now?"
+        fi
 
-if [[ "${RECEIVER_AUTOMATED_INSTALL}" = "false" ]] ; then
-    clear
-    echo -e "\n\e[91m   ${RECEIVER_PROJECT_TITLE}"
-fi
-echo ""
-echo -e "\e[92m  Setting up dump1090-fa..."
-echo ""
-echo -e "\e[93m  ------------------------------------------------------------------------------\e[96m"
-echo ""
-if [[ "${RECEIVER_AUTOMATED_INSTALL}" = "false" ]] ; then
-    whiptail --backtitle "${RECEIVER_PROJECT_TITLE}" --title "Dump1090-fa Setup" --yesno "Dump 1090 is a Mode-S decoder specifically designed for RTL-SDR devices. Dump1090-fa is a fork of the dump1090-mutability version of dump1090 that is specifically designed for FlightAware's PiAware software.\n\nIn order to use this version of dump1090 FlightAware's PiAware software must be installed as well.\n\n  https://github.com/flightaware/dump1090\n\nContinue setup by installing dump1090-fa?" 14 78
-    if [[ $? -eq 1 ]] ; then
-        # Setup has been halted by the user.
-        echo -e "\e[91m  \e[5mINSTALLATION HALTED!\e[25m"
-        echo -e "  Setup has been halted at the request of the user."
-        echo ""
-        echo -e "\e[93m  ------------------------------------------------------------------------------"
-        echo -e "\e[92m  Dump1090-fa setup halted.\e[39m"
-        echo ""
-        read -p "Press enter to continue..." CONTINUE
+        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP1090_TITLE" --yesno "$INSTALL_DUMP1090_MESSAGE" 0 0
+        case $? in
+            0) INSTALL_DUMP1090='true' ;;
+            1) INSTALL_DUMP1090='false' ;;
+            255) exit 1 ;;
+        esac
+    fi
+
+    # Display message stateing PiAware will be required.
+    PIAWARE_REQUIRED_TITLE='PiAware Required'
+    PIAWARE_REQUIRED_MESSAGE="Regarding the FlightAware fork of Dump1090...\n\nThe PiAware software package, which is used to forward ADS-B data to FlightAware, is required in order to use FlightAware's fork of Dump1090. For this reason PiAware will be installed automatically during the setup process."
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$PIAWARE_REQUIRED_TITLE" --msgbox "$PIAWARE_REQUIRED_MESSAGE" 0 0
+    if [ $? -eq 255 ] ; then
         exit 1
     fi
-fi
 
-## CHECK FOR PREREQUISITE PACKAGES
+    # Ask if heywhatsthat.com range rings should be added.
+    ADD_HEYWHATSTHAT_RINGS_TITLE='Heywhaststhat.com Maximum Range Rings'
+    ADD_HEYWHATSTHAT_RINGS_MESSAGE="Maximum range rings can be added to dump1090-mutability using data obtained from Heywhatsthat.com. In order to add these rings to your dump1090-mutability map you will first need to visit http://www.heywhatsthat.com and generate a new panorama centered on the location of your receiver. Once your panorama has been generated a link to the panorama will be displayed in the top left hand portion of the page. You will need the view id which is the series of letters and/or numbers after \"?view=\" in this URL.\n\nWould you like to add heywhatsthat.com maximum range rings to your map?"
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$ADD_HEYWHATSTHAT_RINGS_TITLE" --defaultno --yesno "$ADD_HEYWHATSTHAT_RINGS_MESSAGE" 0 0
+    case $? in
+        0) ADD_HEYWHATSTHAT_RINGS='true' ;;
+        1) ADD_HEYWHATSTHAT_RINGS='false' ;;
+        255) exit 1 ;;
+    esac
+    if [ "$ADD_HEYWHATSTHAT_RINGS" == 'true' ] ; then
+        HEYWHATSTHAT_PANARAMA_ID_TITLE='Heywhatsthat.com Panorama ID'
+        HEYWHATSTHAT_PANARAMA_ID_MESSAGE="Enter the Heywhatsthat.com ID for the panarama you generated on the website."
+        while [ -z $HEYWHATSTHAT_PANARAMA_ID ] ; do
+            HEYWHATSTHAT_PANARAMA_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_PANARAMA_ID_TITLE" --inputbox "$HEYWHATSTHAT_PANARAMA_ID_MESSAGE" 9 50 --output-fd 1)
+            RESULT=$?
+            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                exit 1
+            fi
+            HEYWHATSTHAT_PANARAMA_TITLE='Heywhatsthat.com Panorama ID [REQUIRED]'
+        done
 
-echo -e "\e[95m  Installing packages needed to build and fulfill dependencies...\e[97m"
-echo ""
-CheckPackage git
-CheckPackage curl
-CheckPackage build-essential
-CheckPackage debhelper
-CheckPackage cron
-CheckPackage rtl-sdr
-CheckPackage librtlsdr-dev
-CheckPackage libusb-1.0-0
-CheckPackage libusb-1.0-0-dev
-CheckPackage libtecla1
-CheckPackage pkg-config
-CheckPackage lighttpd
-CheckPackage fakeroot
-CheckPackage dh-systemd
-CheckPackage libncurses5-dev
-CheckPackage cmake
-CheckPackage doxygen
-CheckPackage libtecla-dev
-CheckPackage help2man
-CheckPackage pandoc
+        HEYWHATSTHAT_RING_ONE_ALTITUDE_TITLE='Heywhatsthat.com First Ring Altitude'
+        HEYWHATSTHAT_RING_ONE_ALTITUDE_MESSAGE="Enter the first ring's altitude in meters.\n(default 3048 meters or 10000 feet)"
+        while [ -z $HEYWHATSTHAT_RING_ONE_ALTITUDE ] ; do
+            HEYWHATSTHAT_RING_ONE_ALTITUDE='3048'
+            HEYWHATSTHAT_RING_ONE_ALTITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_RING_ONE_ALTITUDE_TITLE" --inputbox "$HEYWHATSTHAT_RING_ONE_ALTITUDE_MESSAGE" 9 50 "$HEYWHATSTHAT_RING_ONE_ALTITUDE" --output-fd 1)
+            RESULT=$?
+            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                exit 1
+            fi
+            HEYWHATSTHAT_RING_ONE_TITLE='Heywhatsthat.com First Ring Altitude [REQUIRED]'
+        done
 
-## BUILD AND INSTALL THE BLADERF PACKAGE FROM SOURCE IF NOT INSTALLED
+        HEYWHATSTHAT_RING_TWO_ALTITUDE_TITLE='Heywhatsthat.com Second Ring Altitude'
+        HEYWHATSTHAT_RING_TWO_ALTITUDE_MESSAGE="Enter the second ring's altitude in meters.\n(default 12192 meters or 40000 feet)"
+        while [ -z $HEYWHATSTHAT_RING_TWO ] ; do
+            HEYWHATSTHAT_RING_TWO_ALTITUDE='12192'
+            HEYWHATSTHAT_RING_TWO_ALTITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_RING_TWO_ALTITUDE_TITLE" --inputbox "$HEYWHATSTHAT_RING_TWO_ALTITUDE_MESSAGE" 9 50 "$HEYWHATSTHAT_RING_TWO_ALTITUDE" --output-fd 1)
+            RESULT=$?
+            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+                exit 1
+            fi
+            HEYWHATSTHAT_RING_TWO_TITLE='Heywhatsthat.com First Ring Altitude [REQUIRED]'
+        done
+    fi
 
-# Check if the needed bladeRF packages are installed.
-if [[ $(dpkg-query -W -f='${STATUS}' libbladerf2 2>/dev/null | grep -c "ok installed") -eq 0 ]] || [[ $(dpkg-query -W -f='${STATUS}' libbladerf-dev 2>/dev/null | grep -c "ok installed") -eq 0 ]] || [[ $(dpkg-query -W -f='${STATUS}' libbladerf-udev 2>/dev/null | grep -c "ok installed") -eq 0 ]]; then
+    # Ask for a Bing Maps API key if the user wishes to enable Bing Maps.
+    BING_MAPS_API_KEY_TITLE='Bing Maps API Key'
+    BING_MAPS_API_KEY_MESSAGE="Provide a Bing Maps API key here to enable the Bing imagery layer within the dump1090-mutability map, you can obtain a free key at the following website:\n\n  https://www.bingmapsportal.com/\n\nProviding a Bing Maps API key is not required to continue."
+    BING_MAPS_API_KEY=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BING_MAPS_API_KEY_TITLE" --inputbox "$BING_MAPS_API_KEY_MESSAGE" 0 0 --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
+}
+
+## SETUP
+
+function setup {
+
+    echo -e "\n${COLOR_LIGHT_GREEN}------------------------"
+    echo ' Setting up dump1090-fa'
+    echo -e " ------------------------\n"
+
+    # CHECK FOR PREREQUISITE PACKAGES
+
+    echo -e "${COLOR_LIGHT_BLUE}Installing any missing required packages.${COLOR_LIGHT_GRAY}\n"
+
+    CheckPackage debhelper
+    CheckPackage librtlsdr-dev
+    CheckPackage libusb-1.0-0-dev
+    CheckPackage pkg-config
+    CheckPackage dh-systemd
+    CheckPackage libncurses5-dev
+    CheckPackage libbladerf-dev
+    CheckPackage libbladerf1
+    CheckPackage adduser
+    CheckPackage lighttpd
+
+    # DOWNLOAD OR UPDATE THE DUMP1090-FA THE LOCAL GIT REPOSITORY
+
+    echo -e "\n${COLOR_LIGHT_BLUE}Preparing the dump1090-fa Git repository.\n"
     echo ""
-    echo -e "\e[95m  Preparing the bladeRF Git repository...\e[97m"
-    echo ""
-    if [[ -d "${RECEIVER_BUILD_DIRECTORY}/bladeRF/bladeRF" ]] && [[ -d "${RECEIVER_BUILD_DIRECTORY}/bladeRF/bladeRF/.git" ]] ; then
+    if [ -d ${PROJECT_BUILD_DIRECTORY}/dump1090-fa/dump1090 ] && [ -d ${PROJECT_BUILD_DIRECTORY}/dump1090-fa/dump1090/.git ] ; then
         # A directory with a git repository containing the source code already exists.
-        echo -e "\e[94m  Entering the bladeRF git repository directory...\e[97m"
-        cd ${RECEIVER_BUILD_DIRECTORY}/bladeRF/bladeRF 2>&1
-        echo -e "\e[94m  Updating the local bladeRF git repository...\e[97m"
-        echo ""
+        echo -e "${COLOR_BLUE}Entering the dump1090-fa git repository directory..."
+        cd ${PROJECT_BUILD_DIRECTORY}/dump1090-fa/dump1090
+        echo -e "Updating the local dump1090-fa git repository...${COLOR_LIGHT_GRAY}\n"
         git pull
     else
         # A directory containing the source code does not exist in the build directory.
-        echo -e "\e[94m  Creating the bladeRF build directory...\e[97m"
-        echo ""
-        mkdir -vp ${RECEIVER_BUILD_DIRECTORY}/bladeRF
-        echo ""
-        cd ${RECEIVER_BUILD_DIRECTORY}/bladeRF 2>&1
-        echo -e "\e[94m  Cloning the bladeRF git repository locally...\e[97m"
-        echo ""
-        git clone https://github.com/Nuand/bladeRF.git
-    fi
-
-    echo ""
-    echo -e "\e[95m  Building and installing the bladeRF package...\e[97m"
-    echo ""
-    if [[ ! "${PWD}" = "${RECEIVER_BUILD_DIRECTORY}/bladeRF/bladeRF" ]] ; then
-        echo -e "\e[94m  Entering the bladeRF git repository directory...\e[97m"
-        cd ${RECEIVER_BUILD_DIRECTORY}/bladeRF/bladeRF 2>&1
-    fi
-
-    echo -e "\e[94m  Building the bladeRF package...\e[97m"
-    echo ""
-    dpkg-buildpackage -b
-    echo ""
-
-    echo -e "\e[94m  Entering the bladeRF build directory...\e[97m"
-    cd ${RECEIVER_BUILD_DIRECTORY}/bladeRF 2>&1
-
-    if [[ $(dpkg-query -W -f='${STATUS}' libbladerf2 2>/dev/null | grep -c "ok installed") -eq 0 ]]; then
-        echo -e "\e[94m  Installing the libbladerf2 package...\e[97m"
-        echo ""
-        sudo dpkg -i libbladerf2_*.deb
-        echo ""
-    fi
-
-    if [[ $(dpkg-query -W -f='${STATUS}' libbladerf-dev 2>/dev/null | grep -c "ok installed") -eq 0 ]]; then
-        echo -e "\e[94m  Installing the libbladerf-dev package...\e[97m"
-        echo ""
-        sudo dpkg -i libbladerf-dev_*.deb
-        echo ""
-    fi
-
-    if [[ $(dpkg-query -W -f='${STATUS}' libbladerf-udev 2>/dev/null | grep -c "ok installed") -eq 0 ]]; then
-        echo -e "\e[94m  Installing the libbladerf-udev package...\e[97m"
-        echo ""
-        sudo dpkg -i libbladerf-udev_*.deb
-    fi
-fi
-echo ""
-
-## DOWNLOAD OR UPDATE THE DUMP1090-FA SOURCE
-
-echo -e "\e[95m  Preparing the dump1090-fa Git repository...\e[97m"
-echo ""
-if [[ -d "${RECEIVER_BUILD_DIRECTORY}/dump1090-fa/dump1090" ]] && [[ -d "${RECEIVER_BUILD_DIRECTORY}/dump1090-fa/dump1090/.git" ]] ; then
-    # A directory with a git repository containing the source code already exists.
-    echo -e "\e[94m  Entering the dump1090-fa git repository directory...\e[97m"
-    cd ${RECEIVER_BUILD_DIRECTORY}/dump1090-fa/dump1090 2>&1
-    echo -e "\e[94m  Updating the local dump1090-fa git repository...\e[97m"
-    echo ""
-    git pull
-else
-    # A directory containing the source code does not exist in the build directory.
-    echo -e "\e[94m  Creating the ADS-B Receiver Project build directory...\e[97m"
-    echo ""
-    mkdir -vp ${RECEIVER_BUILD_DIRECTORY}/dump1090-fa
-    echo ""
-    echo -e "\e[94m  Entering the dump1090-fa build directory...\e[97m"
-    cd ${RECEIVER_BUILD_DIRECTORY}/dump1090-fa 2>&1
-    echo -e "\e[94m  Cloning the dump1090-fa git repository locally...\e[97m"
-    echo ""
-    git clone https://github.com/flightaware/dump1090.git
-fi
-
-## BUILD AND INSTALL THE DUMP1090-FA PACKAGE
-
-echo ""
-echo -e "\e[95m  Building and installing the dump1090-fa package...\e[97m"
-echo ""
-if [[ ! "${PWD}" = "${RECEIVER_BUILD_DIRECTORY}/dump1090-fa/dump1090" ]] ; then
-    echo -e "\e[94m  Entering the dump1090-fa git repository directory...\e[97m"
-    cd ${RECEIVER_BUILD_DIRECTORY}/dump1090-fa/dump1090 2>&1
-fi
-echo -e "\e[94m  Building the dump1090-fa package...\e[97m"
-echo ""
-dpkg-buildpackage -b
-echo ""
-echo -e "\e[94m  Entering the dump1090-fa build directory...\e[97m"
-cd ${RECEIVER_BUILD_DIRECTORY}/dump1090-fa 2>&1
-echo -e "\e[94m  Installing the dump1090-fa package...\e[97m"
-echo ""
-sudo dpkg -i dump1090-fa_${DUMP1090_FA_VERSION}_*.deb
-
-# Check that the package was installed.
-echo ""
-echo -e "\e[94m  Checking that the dump1090-fa package was installed properly...\e[97m"
-if [[ $(dpkg-query -W -f='${STATUS}' dump1090-fa 2>/dev/null | grep -c "ok installed") -eq 0 ]] ; then
-    # If the dump1090-fa package could not be installed halt setup.
-    echo ""
-    echo -e "\e[91m  \e[5mINSTALLATION HALTED!\e[25m"
-    echo -e "  UNABLE TO INSTALL A REQUIRED PACKAGE."
-    echo -e "  SETUP HAS BEEN TERMINATED!"
-    echo ""
-    echo -e "\e[93mThe package \"dump1090-fa\" could not be installed.\e[39m"
-    echo ""
-    echo -e "\e[93m  ------------------------------------------------------------------------------"
-    echo -e "\e[92m  Dump1090-fa setup halted.\e[39m"
-    echo ""
-    read -p "Press enter to continue..." CONTINUE
-    exit 1
-fi
-
-# Create binary package archive directory.
-if [[ ! -d "${RECEIVER_BUILD_DIRECTORY}/package-archive" ]] ; then
-    echo -e "\e[94m  Creating package archive directory...\e[97m"
-    echo -e ""
-    mkdir -vp ${RECEIVER_BUILD_DIRECTORY}/package-archive 2>&1
-    echo -e ""
-fi
-
-# Archive binary package.
-echo -e "\e[94m  Moving the dump1090-mutability binary package into the archive directory...\e[97m"
-echo ""
-cp -vf ${RECEIVER_BUILD_DIRECTORY}/dump1090-fa/*.deb ${RECEIVER_BUILD_DIRECTORY}/package-archive/ 2>&1
-
-
-## DUMP1090-FA POST INSTALLATION CONFIGURATION
-
-# Ask for a Bing Maps API key.
-if [[ "${RECEIVER_AUTOMATED_INSTALL}" = "false" ]] ; then
-    DUMP1090_BING_MAPS_KEY=$(whiptail --backtitle "${RECEIVER_PROJECT_TITLE}" --title "Bing Maps API Key" --nocancel --inputbox "\nProvide a Bing Maps API key here to enable the Bing imagery layer.\nYou can obtain a free key at https://www.bingmapsportal.com/\n\nProviding a Bing Maps API key is not required to continue." 11 78 "${DUMP1090_BING_MAPS_KEY}" 3>&1 1>&2 2>&3)
-fi
-if [[ -n "${DUMP1090_BING_MAPS_KEY}" ]] ; then
-    echo -e "\e[94m  Setting the Bing Maps API Key to ${DUMP1090_BING_MAPS_KEY}...\e[97m"
-    ChangeConfig "BingMapsAPIKey" "${DUMP1090_BING_MAPS_KEY}" "/usr/share/dump1090-fa/html/config.js"
-fi
-
-# Download Heywhatsthat.com maximum range rings.
-if [[ ! -f "/usr/share/dump1090-fa/html/upintheair.json" ]] ; then
-    if [[ "${RECEIVER_AUTOMATED_INSTALL}" = "false" ]] ; then
-        if (whiptail --backtitle "${RECEIVER_PROJECT_TITLE}" --title "Heywhaststhat.com Maximum Range Rings" --yesno "Maximum range rings can be added to dump1090-fa usings data obtained from Heywhatsthat.com. In order to add these rings to your dump1090-fa map you will first need to visit http://www.heywhatsthat.com and generate a new panorama centered on the location of your receiver. Once your panorama has been generated a link to the panorama will be displayed in the top left hand portion of the page. You will need the view id which is the series of letters and/or numbers after \"?view=\" in this URL.\n\nWould you like to add heywhatsthat.com maximum range rings to your map?" 16 78); then
-            # Set the DUMP1090_HEYWHATSTHAT_INSTALL variable to true.
-            DUMP1090_HEYWHATSTHAT_INSTALL="true"
-            # Ask the user for the Heywhatsthat.com panorama ID.
-            DUMP1090_HEYWHATSTHAT_ID_TITLE="Heywhatsthat.com Panorama ID"
-            while [[ -z "${DUMP1090_HEYWHATSTHAT_ID}" ]] ; do
-                DUMP1090_HEYWHATSTHAT_ID=$(whiptail --backtitle "${RECEIVER_PROJECT_TITLE}" --title "${DUMP1090_HEYWHATSTHAT_ID_TITLE}" --nocancel --inputbox "\nEnter your Heywhatsthat.com panorama ID." 8 78 3>&1 1>&2 2>&3)
-                DUMP1090_HEYWHATSTHAT_ID_TITLE="Heywhatsthat.com Panorama ID (REQUIRED)"
-            done
-            # Ask the user what altitude in meters to set the first range ring.
-            DUMP1090_HEYWHATSTHAT_RING_ONE_TITLE="Heywhatsthat.com First Ring Altitude"
-            while [[ -z "${DUMP1090_HEYWHATSTHAT_RING_ONE}" ]] ; do
-                DUMP1090_HEYWHATSTHAT_RING_ONE=$(whiptail --backtitle "${RECEIVER_PROJECT_TITLE}" --title "${DUMP1090_HEYWHATSTHAT_RING_ONE_TITLE}" --nocancel --inputbox "\nEnter the first ring's altitude in meters.\n(default 3048 meters or 10000 feet)" 8 78 "3048" 3>&1 1>&2 2>&3)
-                DUMP1090_HEYWHATSTHAT_RING_ONE_TITLE="Heywhatsthat.com First Ring Altitude (REQUIRED)"
-            done
-            # Ask the user what altitude in meters to set the second range ring.
-            DUMP1090_HEYWHATSTHAT_RING_TWO_TITLE="Heywhatsthat.com Second Ring Altitude"
-            while [[ -z "${DUMP1090_HEYWHATSTHAT_RING_TWO}" ]] ; do
-                DUMP1090_HEYWHATSTHAT_RING_TWO=$(whiptail --backtitle "${RECEIVER_PROJECT_TITLE}" --title "${DUMP1090_HEYWHATSTHAT_RING_TWO_TITLE}" --nocancel --inputbox "\nEnter the second ring's altitude in meters.\n(default 12192 meters or 40000 feet)" 8 78 "12192" 3>&1 1>&2 2>&3)
-                DUMP1090_HEYWHATSTHAT_RING_TWO_TITLE="Heywhatsthat.com Second Ring Altitude (REQUIRED)"
-            done
+        if [ ! -d ${PROJECT_BUILD_DIRECTORY}/dump1090-fa ] ; then
+            echo -e "${COLOR_BLUE}Creating the dump1090-fa build directory...${COLOR_LIGHT_GRAY}\n"
+            mkdir -vp ${PROJECT_BUILD_DIRECTORY}/dump1090-fa
+            echo ''
         fi
+        echo -e "${COLOR_BLUE}Entering the dump1090-fa build directory..."
+        cd ${PROJECT_BUILD_DIRECTORY}/dump1090-fa
+        echo -e "Cloning the dump1090-fa git repository locally...${COLOR_LIGHT_GRAY}\n"
+        git clone https://github.com/flightaware/dump1090.git
     fi
-    # If the Heywhatsthat.com maximum range rings are to be added download them now.
-    if [[ "${DUMP1090_HEYWHATSTHAT_INSTALL}" = "true" ]] ; then
-        echo -e "\e[94m  Downloading JSON data pertaining to the supplied panorama ID...\e[97m"
-        echo ""
-        sudo wget -O /usr/share/dump1090-fa/html/upintheair.json "http://www.heywhatsthat.com/api/upintheair.json?id=${DUMP1090_HEYWHATSTHAT_ID}&refraction=0.25&alts=${DUMP1090_HEYWHATSTHAT_RING_ONE},${DUMP1090_HEYWHATSTHAT_RING_TWO}"
+
+    # BUILD AND INSTALL THE DUMP1090-FA PACKAGE
+
+    # Build the dump1090-fa package.
+    echo -e "\n${COLOR_LIGHT_BLUE}Building and installing the dump1090-fa package.\n"
+    if [ "$PWD" != "${PROJECT_BUILD_DIRECTORY}/dump1090-fa/dump1090" ] ; then
+        echo -e "${COLOR_BLUE}Entering the dump1090-fa git repository directory..."
+        cd ${PROJECT_BUILD_DIRECTORY}/dump1090-fa/dump1090
     fi
-fi
+    echo -e "Building the dump1090-fa package...${COLOR_LIGHT_GRAY}\n"
+    dpkg-buildpackage -b
+    echo -e "\n${COLOR_BLUE}Entering the dump1090-fa build directory..."
+    cd ${PROJECT_BUILD_DIRECTORY}/dump1090-fa
 
-### SETUP COMPLETE
+    # Check that the dump1090-fa package was built successfully.
+    if [ ! -f dump1090-fa_${DUMP1090_FA_VERSION}_*.deb ] ; then
+        # If the dump1090-fa package was not built.
+        echo "\n${COLOR_RED}The package dump1090-fa was not built successfully.${COLOR_LIGHT_GRAY}"
+        exit 1
+    fi
 
-# Return to the project root directory.
-echo ""
-echo -e "\e[94m  Entering the ADS-B Receiver Project root directory...\e[97m"
-cd ${RECEIVER_ROOT_DIRECTORY} 2>&1
+    # Install the dump1090-fa package.
+    echo -e "\n${COLOR_BLUE}Installing the dump1090-fa package...${COLOR_LIGHT_GRAY}\n"
+    sudo dpkg -i dump1090-fa_${DUMP1090_FA_VERSION}_*.deb
+    echo ''
 
-echo ""
-echo -e "\e[93m  ------------------------------------------------------------------------------"
-echo -e "\e[92m  Dump1090-fa setup is complete.\e[39m"
-echo ""
-if [[ "${RECEIVER_AUTOMATED_INSTALL}" = "false" ]] ; then
-    read -p "Press enter to continue..." CONTINUE
-fi
+    # Check that the package was installed.
+    echo -e "${COLOR_BLUE}Checking that the dump1090-fa package was installed successfully...${COLOR_LIGHT_GRAY}"
+    if [ $(dpkg-query -W -f='${STATUS}' dump1090-fa 2>/dev/null | grep -c "ok installed") -eq 0 ] ; then
+        # If the dump1090-fa package could not be installed halt setup.
+        echo "\n${COLOR_RED}The package dump1090-fa was not installed successfully.${COLOR_LIGHT_GRAY}"
+        exit 1
+    fi
 
-exit 0
+    # DUMP1090-FA POST INSTALLATION CONFIGURATION
+
+    # Add the Bing Maps API key if one was supplied supplied.
+    if [ ! -z $BING_MAPS_API_KEY ] ; then
+        echo -e "${COLOR_BLUE}Writing Bing Maps API key to the dump1090-fa config.js file...${COLOR_LIGHT_GRAY}"
+        sudo ChangeConfig "BingMapsAPIKey" "$BING_MAPS_API_KEY" "/usr/share/dump1090-fa/html/config.js"
+    fi
+
+    # Download Heywhatsthat.com maximum range rings JSON.
+    if [ "$ADD_HEYWHATSTHAT" == 'true' ] ; then
+        echo -e "${COLOR_BLUE}Downloading heywhatsthat.com JSON data pertaining to the supplied panorama ID...${COLOR_LIGHT_GRAY}\n"
+        sudo wget -O /usr/share/dump1090-fa/html/upintheair.json "http://www.heywhatsthat.com/api/upintheair.json?id=${HEYWHATSTHAT_PANARAMA_ID}&refraction=0.25&alts=${HEYWHATSTHAT_RING_ONE},${HEYWHATSTHAT_RING_TWO}"
+        echo ''
+    fi
+
+    # SETUP COMPLETE
+
+    # Return to the project root directory.
+    echo -e "${COLOR_BLUE}Entering the ADS-B Receiver Project root directory..."
+    cd $PROJECT_ROOT_DIRECTORY
+
+    echo -e "\n${COLOR_LIGHT_GREEN}----------------------------"
+    echo ' Dump1090-fa setup complete.'
+    echo -e " ----------------------------\n${COLOR_LIGHT_GRAY}"
+
+    exit 0
+}
