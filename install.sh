@@ -176,6 +176,7 @@ CheckPackage bc
 CheckPackage curl
 CheckPackage dialog
 CheckPackage git
+CheckPackage jq
 
 ## EXPORT REMAINING VARIABLES
 

@@ -33,167 +33,174 @@
 
 ## DIALOGS
 
-function dialogs {
+function dump1090_dialogs() {
 
-    # Assign parameters passed to this function to variables.
-    DUMP1090_INSTALLED=$1
-    UPGRADE_AVAILABLE=$2
+    # Get current settings if they are available.
+    if [ "${DUMP1090[instlled]}" == 'true' ] ; then
+        RECEIVER_LATITUDE=`GetConfig "LAT" "/etc/default/dump1090-mutability"`
+        RECEIVER_LONGITUDE=`GetConfig "LON" "/etc/default/dump1090-mutability"`
+        DUMP1090_MAX_RANGE=`GetConfig "MAX_RANGE" "/etc/default/dump1090-mutability"`
+        BING_MAPS_API_KEY=`GetConfig "BingMapsAPIKey" "/usr/share/dump1090-mutability/html/config.js"`
 
-    # Needs to return the following variables...
-    # ------------------------------------------
-    # INSTALL_DUMP1090
-    # RECIEVER_LATITUDE
-    # RECIEVER_LONGITUDE
-    # DUMP1090_MAX_RANGE
-    # DUMP1090_UNIT_OF_MEASURMENT
-    # BIND_DUMP1090_TO_ALL_IP_ADDRESSES
-    # ADD_HEYWHATSTHAT_RINGS
-    # HEYWHATSTHAT_PANARAMA_ID
-    # HEYWHATSTHAT_RING_ONE_ALTITUDE
-    # HEYWHATSTHAT_RING_TWO_ALTITUDE
-    # BING_MAPS_API_KEY
+        if [ -f /usr/share/dump1090-mutability/html/upintheair.json ] ; then
+            HEYWHATSTHAT_RING_ONE_ALTITUDE=`cat /usr/share/dump1090-mutability/html/upintheair.json | jq -r '.rings[0].alt'`
+            HEYWHATSTHAT_RING_TWO_ALTITUDE=`cat /usr/share/dump1090-mutability/html/upintheair.json | jq -r '.rings[1].alt'`
+        fi
+    fi
 
-    if [ "$DUMP1090_INSTALLED" == 'false' ] || [ "$UPGRADE_AVAILABLE" == "true" ] ; then
-        if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
+    # Begin displaying dialogs.
+    if [ "${DUMP1090[installed]}" == 'false' ] || [ "${DUMP1090[upgradeable]}" == "true" ] ; then
+        if [ "${DUMP1090[installed]}" == 'false' ] ; then
 
             # This would be a clean installation of dump1090-mutability.
-            INSTALL_DUMP1090_TITLE='Install dump1090-mutability'
-            INSTALL_DUMP1090_MESSAGE="It has been noted in dump1090-mutability's README.md that \"This fork sees very little maintenance and is really only here for historical reasons.\"Dump1090 is a Mode-S decoder specifically designed for RTL-SDR devices.\n\nDump1090-mutability is a fork of MalcolmRobb's version of Dump1090 that adds new functionality and is designed to be built as a Debian/Raspbian package.\n\n  https://github.com/mutability/dump1090\n\nContinue setup by installing dump1090-mutability?"
+            DUMP1090_DO_INSTALL_TITLE='Install dump1090-mutability'
+            DUMP1090_DO_INSTALL_MESSAGE="It has been noted in dump1090-mutability's README.md that \"This fork sees very little maintenance and is really only here for historical reasons.\"Dump1090 is a Mode-S decoder specifically designed for RTL-SDR devices.\n\nDump1090-mutability is a fork of MalcolmRobb's version of Dump1090 that adds new functionality and is designed to be built as a Debian/Raspbian package.\n\n  https://github.com/mutability/dump1090\n\nContinue setup by installing dump1090-mutability?"
         else
 
             # Dump1090-mutability is currently installed.
-            INSTALL_DUMP1090_TITLE='Recompile and install dump1090-mutability.'
-            INSTALL_DUMP1090_MESSAGE="It has been noted in dump1090-mutability's README.md that \"This fork sees very little maintenance and is really only here for historical reasons.\"\n\nSince the release of v1.14 no other dump1090-mutability releases have been made. However, development did continue but the version was frozen at v1.15~dev. This being said there is no way to confirm the installed version has been built on the latest available source code. The best way to ensure you are using the most resent version of dump1090-mutability is to occassionally download then rempile and install the latest source code.\n\nWould you like to recompile and install dump1090-mutability?"
+            DUMP1090_DO_INSTALL_TITLE='Recompile and install dump1090-mutability.'
+            DUMP1090_DO_INSTALL_MESSAGE="It has been noted in dump1090-mutability's README.md that \"This fork sees very little maintenance and is really only here for historical reasons.\"\n\nSince the release of v1.14 no other dump1090-mutability releases have been made. However, development did continue but the version was frozen at v1.15~dev. This being said there is no way to confirm the installed version has been built on the latest available source code. The best way to ensure you are using the most resent version of dump1090-mutability is to occassionally download then rempile and install the latest source code.\n\nWould you like to recompile and install dump1090-mutability?"
         fi
 
-        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP1090_TITLE" --yesno "$INSTALL_DUMP1090_MESSAGE" 0 0
+        dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DO_INSTALL_TITLE" --yesno "$DUMP1090_DO_INSTALL_MESSAGE" 0 0
         case $? in
-            0) INSTALL_DUMP1090='true' ;;
-            1) INSTALL_DUMP1090='false' ;;
+            0) DUMP1090_DO_INSTALL='true' ;;
+            1) DUMP1090_DO_INSTALL='false' ;;
             255) exit 1 ;;
         esac
     fi
 
     # Ask for receiver latitude.
-    RECIEVER_LATITUDE_TITLE='Receiver Latitude'
-    RECIEVER_LATITUDE_MESSAGE="Enter your receiver's latitude.\n(Example: XX.XXXXXXX)"
-    while [ -z $RECIEVER_LATITUDE ] ; do
-        RECIEVER_LATITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECIEVER_LATITUDE_TITLE" --inputbox "$RECIEVER_LATITUDE_MESSAGE" 0 0 "$RECIEVER_LATITUDE" --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-            exit 1
-        fi
-        RECIEVER_LATITUDE_TITLE='Receiver Latitude [REQUIRED]'
-    done
+    RECEIVER_LATITUDE_TITLE='Receiver Latitude'
+    RECEIVER_LATITUDE_MESSAGE="Enter your receiver's latitude.\n(Example: XX.XXXXXXX)"
+    RECEIVER_LATITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECEIVER_LATITUDE_TITLE" --inputbox "$RECEIVER_LATITUDE_MESSAGE" 0 0 "$RECEIVER_LATITUDE" --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
 
     # Ask for receiver longitude.
-    RECIEVER_LONGITUDE_TITLE='Receiver Longitude'
-    RECIEVER_LONGITUDE_MESSAGE="Enter your receeiver's longitude.\n(Example: XX.XXXXXXX)"
-    while [ -z $RECIEVER_LONGITUDE ] ; do
-        RECIEVER_LONGITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECIEVER_LONGITUDE_TITLE" --inputbox "$RECIEVER_LONGITUDE_MESSAGE" 0 0 "$RECIEVER_LONGITUDE" --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-            exit 1
-        fi
-        RECIEVER_LONGITUDE_TITLE='Receiver Longitude [REQUIRED]'
-    done
+    RECEIVER_LONGITUDE_TITLE='Receiver Longitude'
+    RECEIVER_LONGITUDE_MESSAGE="Enter your receeiver's longitude.\n(Example: XX.XXXXXXX)"
+    RECEIVER_LONGITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$RECEIVER_LONGITUDE_TITLE" --inputbox "$RECEIVER_LONGITUDE_MESSAGE" 0 0 "$RECEIVER_LONGITUDE" --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
 
     # Ask what the max range for dump1090 should be set to.
     DUMP1090_MAX_RANGE_TITLE='Dump1090-mutability Maximum Range'
     DUMP1090_MAX_RANGE_MESSAGE="The dump1090-mutability default maximum range value of 300 nmi (~550km) has been reported to be below what is possible under the right conditions. This value should be increased to 360 nmi (~660 km) to match the value used by the dump1090-fa fork."
-    while [ -z $DUMP1090_MAX_RANGE ] ; do
+    if [ -z $DUMP1090_MAX_RANGE ] ; then
         DUMP1090_MAX_RANGE='360'
-        DUMP1090_MAX_RANGE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_MAX_RANGE_TITLE" --inputbox "$DUMP1090_MAX_RANGE_MESSAGE" 0 0 "$DUMP1090_MAX_RANGE" --output-fd 1)
-        RESULT=$?
-        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-            exit 1
-        fi
-        RECIEVER_LATITUDE_TITLE='Dump1090-mutability Maximum Range [REQUIRED]'
-    done
+    fi
+    DUMP1090_MAX_RANGE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_MAX_RANGE_TITLE" --inputbox "$DUMP1090_MAX_RANGE_MESSAGE" 0 0 "$DUMP1090_MAX_RANGE" --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
 
     # Ask what the default unit of measurment used by dump1090 should be.
-    DUMP1090_UNIT_OF_MEASURMENT_TITLE='Select Dump1090 Unit of Measurement'
-    DUMP1090_UNIT_OF_MEASURMENT_MESSAGE='Please select the unit of measurement to be used by dump1090-mutability.'
-    dialog  --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_UNIT_OF_MEASURMENT_TITLE" --yes-button "Imperial" --no-button "Metric" --yesno "$DUMP1090_UNIT_OF_MEASURMENT_MESSAGE" 0 0
+    DUMP1090_UNIT_OF_MEASUREMENT_TITLE='Select Dump1090 Unit of Measurement'
+    DUMP1090_UNIT_OF_MEASUREMENT_MESSAGE='Please select the unit of measurement to be used by dump1090-mutability.'
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_UNIT_OF_MEASUREMENT_TITLE" --yes-button "Imperial" --no-button "Metric" --yesno "$DUMP1090_UNIT_OF_MEASUREMENT_MESSAGE" 7 60
     case $? in
-        0) DUMP1090_UNIT_OF_MEASURMENT='imperial' ;;
-        1) DUMP1090_UNIT_OF_MEASURMENT='metric' ;;
+        0) DUMP1090_UNIT_OF_MEASUREMENT='imperial' ;;
+        1) DUMP1090_UNIT_OF_MEASUREMENT='metric' ;;
         255) exit 1 ;;
     esac
 
     # Ask if dump1090 should listen on all IP addresses instead of only 127.0.0.1.
-    BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE='Bind dump1090-mutability To All IP Addresses'
-    BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE="By default dump1090-mutability is bound only to the local loopback IP address(s) for security reasons. However some people wish to make dump1090-mutability's data accessable externally by other devices. To allow this dump1090-mutability can be configured to listen on all IP addresses bound to this device. It is recommended that unless you plan to access this device from an external source that dump1090-mutability remain bound only to the local loopback IP address(s).\n\nWould you like dump1090-mutability to listen on all IP addesses?"
-    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_TITLE" --yesno "$BIND_DUMP1090_TO_ALL_IP_ADDRESSES_MESSAGE" 0 0
+    DUMP1090_BIND_ALL_IPS_TITLE='Bind dump1090-mutability To All IP Addresses'
+    DUMP1090_BIND_ALL_IPS_MESSAGE="By default dump1090-mutability is bound only to the local loopback IP address(s) for security reasons. However some people wish to make dump1090-mutability's data accessable externally by other devices. To allow this dump1090-mutability can be configured to listen on all IP addresses bound to this device. It is recommended that unless you plan to access this device from an external source that dump1090-mutability remain bound only to the local loopback IP address(s).\n\nWould you like dump1090-mutability to listen on all IP addesses?"
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_BIND_ALL_IPS_TITLE" --yesno "$DUMP1090_BIND_ALL_IPS_MESSAGE" 0 0
     case $? in
-        0) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='true' ;;
-        1) BIND_DUMP1090_TO_ALL_IP_ADDRESSES='false' ;;
+        0) DUMP1090_BIND_ALL_IPS='true' ;;
+        1) DUMP1090_BIND_ALL_IPS='false' ;;
         255) exit 1 ;;
     esac
 
     # Ask if heywhatsthat.com range rings should be added.
-    HEYWHATSTHAT_ADD_TITLE='Heywhaststhat.com Maximum Range Rings'
-    HEYWHATSTHAT_ADD_MESSAGE="Maximum range rings can be added to dump1090-mutability using data obtained from Heywhatsthat.com. In order to add these rings to your dump1090-mutability map you will first need to visit http://www.heywhatsthat.com and generate a new panorama centered on the location of your receiver. Once your panorama has been generated a link to the panorama will be displayed in the top left hand portion of the page. You will need the view id which is the series of letters and/or numbers after \"?view=\" in this URL.\n\nWould you like to add heywhatsthat.com maximum range rings to your map?"
+
+    if [ -f /usr/share/dump1090-mutability/html/upintheair.json ] ; then
+        # Heywhatsthat.com range rings have already been added to the map.
+        HEYWHATSTHAT_ADD_TITLE='Heywhaststhat.com Maximum Range Rings'
+        HEYWHATSTHAT_ADD_MESSAGE="Heywhaststhat.com maximum range rings have already been added to dump1090-mutability. If you would like to do so you can upload a new copy of upintheair.json to replace the current copy. In order to do so you will first need to visit http://www.heywhatsthat.com and generate a new panorama centered on the location of your receiver. Once your panorama has been generated a link to the panorama will be displayed in the top left hand portion of the page. You will need the view id which is the series of letters and/or numbers after \"?view=\" in this URL.\n\nWould you like to update the heywhatsthat.com maximum range rings for your map?"
+    else
+        # Heywhatsthat.com range rings have not been added to the map.
+        HEYWHATSTHAT_ADD_TITLE='Heywhaststhat.com Maximum Range Rings'
+        HEYWHATSTHAT_ADD_MESSAGE="Maximum range rings can be added to dump1090-mutability using data obtained from Heywhatsthat.com. In order to add these rings to your dump1090-mutability map you will first need to visit http://www.heywhatsthat.com and generate a new panorama centered on the location of your receiver. Once your panorama has been generated a link to the panorama will be displayed in the top left hand portion of the page. You will need the view id which is the series of letters and/or numbers after \"?view=\" in this URL.\n\nWould you like to add heywhatsthat.com maximum range rings to your map?"
+    fi
+
     dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_ADD_TITLE" --defaultno --yesno "$HEYWHATSTHAT_ADD_MESSAGE" 0 0
     case $? in
         0) HEYWHATSTHAT_ADD='true' ;;
         1) HEYWHATSTHAT_ADD='false' ;;
         255) exit 1 ;;
     esac
+
     if [ "$HEYWHATSTHAT_ADD" == 'true' ] ; then
         HEYWHATSTHAT_PANARAMA_ID_TITLE='Heywhatsthat.com Panorama ID'
         HEYWHATSTHAT_PANARAMA_ID_MESSAGE="Enter your Heywhatsthat.com panorama ID."
-        while [ -z $HEYWHATSTHAT_PANARAMA ] ; do
-            HEYWHATSTHAT_PANARAMA=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "HEYWHATSTHAT_PANARAMA_TITLE" --inputbox "$HEYWHATSTHAT_PANARAMA_MESSAGE" 0 0 --output-fd 1)
-            RESULT=$?
-            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-                exit 1
-            fi
-            HEYWHATSTHAT_PANARAMA_TITLE='Heywhatsthat.com Panorama ID [REQUIRED]'
-        done
+        HEYWHATSTHAT_PANARAMA_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "HEYWHATSTHAT_PANARAMA_ID_TITLE" --inputbox "$HEYWHATSTHAT_PANARAMA_ID_MESSAGE" 0 0 --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
 
-        HEYWHATSTHAT_RING_ONE_TITLE='Heywhatsthat.com First Ring Altitude'
-        HEYWHATSTHAT_RING_ONE_MESSAGE="Enter the first ring's altitude in meters.\n(default 3048 meters or 10000 feet)"
-        while [ -z $HEYWHATSTHAT_RING_ONE ] ; do
-            HEYWHATSTHAT_RING_ONE='3048'
-            HEYWHATSTHAT_RING_ONE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_RING_ONE_TITLE" --inputbox "$HEYWHATSTHAT_RING_ONE_MESSAGE" 0 0 "$HEYWHATSTHAT_RING_ONE" --output-fd 1)
-            RESULT=$?
-            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-                exit 1
-            fi
-            HEYWHATSTHAT_RING_ONE_TITLE='Heywhatsthat.com First Ring Altitude [REQUIRED]'
-        done
+        HEYWHATSTHAT_RING_ONE_ALTITUDE_TITLE='Heywhatsthat.com First Ring Altitude'
+        HEYWHATSTHAT_RING_ONE_ALTITUDE_MESSAGE="Enter the first ring's altitude in meters.\n(default 3048 meters or 10000 feet)"
+        if [ -z $HEYWHATSTHAT_RING_ONE_ALTITUDE ] ; then
+            HEYWHATSTHAT_RING_ONE_ALTITUDE='3048'
+        fi
+        HEYWHATSTHAT_RING_ONE_ALTITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_RING_ONE_ALTITUDE_TITLE" --inputbox "$HEYWHATSTHAT_RING_ONE_ALTITUDE_MESSAGE" 0 0 "$HEYWHATSTHAT_RING_ONE_ALTITUDE" --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
 
-        HEYWHATSTHAT_RING_TWO_TITLE='Heywhatsthat.com Second Ring Altitude'
-        HEYWHATSTHAT_RING_TWO_MESSAGE="Enter the second ring's altitude in meters.\n\(default 12192 meters or 40000 feet\)"
-        while [ -z $HEYWHATSTHAT_RING_TWO ] ; do
-            HEYWHATSTHAT_RING_TWO='12192'
-            HEYWHATSTHAT_RING_TWO=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_RING_TWO_TITLE" --inputbox "$HEYWHATSTHAT_RING_TWO_MESSAGE" 0 0 "$HEYWHATSTHAT_RING_TWO" --output-fd 1)
-            RESULT=$?
-            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-                exit 1
-            fi
-            HEYWHATSTHAT_RING_TWO_TITLE='Heywhatsthat.com First Ring Altitude [REQUIRED]'
-        done
+        HEYWHATSTHAT_RING_TWO_ALTITUDE_TITLE='Heywhatsthat.com Second Ring Altitude'
+        HEYWHATSTHAT_RING_TWO_ALTITUDE_MESSAGE="Enter the second ring's altitude in meters.\n(default 12192 meters or 40000 feet)"
+        if [ -z $HEYWHATSTHAT_RING_TWO_ALTITUDE ] ; then
+            HEYWHATSTHAT_RING_TWO_ALTITUDE='12192'
+        fi
+        HEYWHATSTHAT_RING_TWO_ALTITUDE=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$HEYWHATSTHAT_RING_TWO_ALTITUDE_TITLE" --inputbox "$HEYWHATSTHAT_RING_TWO_ALTITUDE_MESSAGE" 0 0 "$HEYWHATSTHAT_RING_TWO_ALTITUDE" --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
     fi
 
     # Ask for a Bing Maps API key if the user wishes to enable Bing Maps.
     BING_MAPS_API_KEY_TITLE='Bing Maps API Key'
     BING_MAPS_API_KEY_MESSAGE="Provide a Bing Maps API key here to enable the Bing imagery layer within the dump1090-mutability map, you can obtain a free key at the following website:\n\n  https://www.bingmapsportal.com/\n\nProviding a Bing Maps API key is not required to continue."
-    BING_MAPS_API_KEY=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BING_MAPS_API_KEY_TITLE" --inputbox "$BING_MAPS_API_KEY_MESSAGE" 0 0 --output-fd 1)
+    BING_MAPS_API_KEY=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$BING_MAPS_API_KEY_TITLE" --inputbox "$BING_MAPS_API_KEY_MESSAGE" 0 0 "$BING_MAPS_API_KEY" --output-fd 1)
     RESULT=$?
     if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
         exit 1
     fi
+
+    # Return the collected data.
+    RECEIVER[latitude]=$RECEIVER_LATITUDE
+    RECEIVER[longitude]=$RECEIVER_LONGITUDE
+    DUMP1090[max_range]=$DUMP1090_MAX_RANGE
+    DUMP1090[do_install]=$DUMP1090_DO_INSTALL
+    DUMP1090[unit_of_measurment]=$DUMP1090_UNIT_OF_MEASUREMENT
+    DUMP1090[bind_all_ips]=$DUMP1090_BIND_ALL_IPS
+    BING[maps_api_key]=$BING_MAPS_API_KEY
+    HEYWHATSTHAT[ring_one_altitude]=$HEYWHATSTHAT_RING_ONE_ALTITUDE
+    HEYWHATSTHAT[ring_two_altitude]=$HEYWHATSTHAT_RING_TWO_ALTITUDE
+    HEYWHATSTHAT[panarama_id]=$HEYWHATSTHAT_PANARAMA_ID
+    HEYWHATSTHAT[add]=$HEYWHATSTHAT_ADD
 }
 
 ## BEGIN SETUP
 
+function setup() {
+
 echo -e "\n${COLOR_LIGHT_GREEN}------------------------"
 echo ' Setting up dump1090-fa'
 echo -e " ------------------------\n"
-
-## CHECK FOR PREREQUISITE PACKAGES
 
 ## CHECK FOR PREREQUISITE PACKAGES
 
@@ -332,7 +339,7 @@ fi
 # Download Heywhatsthat.com maximum range rings JSON.
 if [ "$ADD_HEYWHATSTHAT" == 'true' ] ; then
     echo -e "${COLOR_BLUE}Downloading heywhatsthat.com JSON data pertaining to the supplied panorama ID...${COLOR_LIGHT_GRAY}\n"
-    sudo wget -O /usr/share/dump1090-fa/html/upintheair.json "http://www.heywhatsthat.com/api/upintheair.json?id=${HEYWHATSTHAT_PANARAMA_ID}&refraction=0.25&alts=${HEYWHATSTHAT_RING_ONE},${HEYWHATSTHAT_RING_TWO$
+    #sudo wget -O /usr/share/dump1090-mutability/html/upintheair.json "http://www.heywhatsthat.com/api/upintheair.json?id=${HEYWHATSTHAT_PANARAMA_ID}&refraction=0.25&alts=${HEYWHATSTHAT_RING_ONE},${HEYWHATSTHAT_RING_TWO}"
     echo ''
 fi
 
@@ -355,4 +362,4 @@ echo -e "\n${COLOR_LIGHT_GREEN}------------------------------------"
 echo ' Dump1090-mutability setup complete.'
 echo -e " ------------------------------------\n${COLOR_LIGHT_GRAY}"
 
-exit 0
+}

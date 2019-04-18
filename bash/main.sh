@@ -31,9 +31,23 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+## DECLARE ARRAYS
+
+declare -A RECEIVER
+declare -A DUMP1090
+declare -A DUMP978
+declare -A HEYWHATSTHAT
+declare -A BING
+
+export RECEIVER
+export DUMP1090
+export DUMP978
+export HEYWHATSTHAT
+export BING
+
 ## SOURCE EXTERNAL SCRIPTS
 
-source ${PROJECT_BASH_DIRECTORY}/init.sh
+source ${PROJECT_BASH_DIRECTORY}/checks.sh
 source ${PROJECT_BASH_DIRECTORY}/variables.sh
 source ${PROJECT_BASH_DIRECTORY}/functions.sh
 
@@ -46,15 +60,17 @@ if [ $? -eq 255 ] ; then
     exit 1
 fi
 
-## DUMP1090 DIALOGS
+## DUMP1090
 
-if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
+# Check the status of Dump1090.
+dump1090_status
 
-    # A fork of Dump1090 is not installed.
+if [ "${DUMP1090[installed]}" == 'false' ] ; then
 
+    # Have the user choose which Dump1090 fork to install.
     DUMP1090_FORK_TITLE='Choose Dump1090 Fork'
     DUMP1090_FORK_MESSAGE="Dump1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original. Some of the more popular and requested ones are available for installation using this setup process.\n\nPlease choose the fork which you wish to install."
-    DUMP1090_FORK=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_FORK_TITLE" --radiolist "$DUMP1090_FORK_MESSAGE" 0 0 0 \
+    DUMP1090[fork]=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_FORK_TITLE" --radiolist "$DUMP1090_FORK_MESSAGE" 0 0 0 \
                     "dump1090-mutability" "(Mutability)" on \
                     "dump1090-fa" "(FlightAware)" off \
                     "dump1090-hptoa" "(OpenSky Network)" off --output-fd 1)
@@ -64,78 +80,92 @@ if [ "$DUMP1090_INSTALLED" == 'false' ] ; then
     fi
 fi
 
-case $DUMP1090_FORK in
+case ${DUMP1090[fork]} in
     'dump1090-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-mutability.sh ;;
     'dump1090-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-fa.sh ;;
     'dump1090-hptoa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-hptoa.sh ;;
 esac
 
-# Display Dump1090 setup dialogs.
-dialogs $DUMP1090_INSTALLED $DUMP1090_UPGRADEABLE
+# Display the proper Dump1090 setup dialogs.
+dump1090_dialogs
+
+## DUMP978
+
+# Check the status of Dump978.
+dump978_status
+
+if [ "${DUMP978[installed]}" == 'false' ] ; then
+
+    # TODO:
+    # Ask user if they wish to install dump978 if it is not already installed.
+
+    # Have the user choose which Dump978 fork to install.
+    DUMP978_FORK_TITLE='Choose Dump978 Fork'
+    DUMP978_FORK_MESSAGE=""
+    DUMP978[fork]=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_FORK_TITLE" --radiolist "$DUMP978_FORK_MESSAGE" 0 0 0 \
+                    "dump978-mutability" "(Mutability)" off \
+                    "dump978-fa" "(FlightAware)" off  --output-fd 1)
+    RESULT=$?
+    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+        exit 1
+    fi
+fi
+
+case ${DUMP978[fork]} in
+    'dump978-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump978-mutability.sh ;;
+    'dump978-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump978-fa.sh ;;
+esac
+
+# Display the proper Dump1090 setup dialogs.
+dump978_dialogs
 
 
+# Display array contents during development.
+echo ''
+echo ''
+echo 'RECEIVER ARRAY'
+echo "  latitude: ${RECEIVER[latitude]}"
+echo "  longitude: ${RECEIVER[longitude]}"
+echo ''
+echo 'DUMP1090 ARRAY'
+echo "  installed: ${DUMP1090[installed]}"
+echo "  fork: ${DUMP1090[fork]}"
+echo "  upgradeable: ${DUMP1090[upgradeable]}"
+echo "  do_install: ${DUMP1090[do_install]}"
+echo "  device_id: ${DUMP978[device_id]}"
+echo "  bind_all_ips: ${DUMP1090[bind_all_ips]}"
+echo "  max_range: ${DUMP1090[max_range]}"
+echo "  unit_of_measure: ${DUMP1090[unit_of_measurment]}"
+echo ''
+echo 'DUMP978 ARRAY'
+echo "  installed: ${DUMP978[installed]}"
+echo "  fork: ${DUMP978[fork]}"
+echo "  upgradeable: ${DUMP978[upgradeable]}"
+echo "  do_install: ${DUMP978[do_install]}"
+echo "  device_id: ${DUMP978[device_id]}"
+echo "  samplerate: ${DUMP978[samplerate]}"
+echo "  gain: ${DUMP978[gain]}"
+echo ''
+echo 'HAYWHATSTHAT ARRAY'
+echo "  add: ${HEYWHATSTHAT[add]}"
+echo "  panarama_id: ${HEYWHATSTHAT[panarama_id]}"
+echo "  ring_one_altitude: ${HEYWHATSTHAT[ring_one_altitude]}"
+echo "  ring_two_altitude: ${HEYWHATSTHAT[ring_two_altitude]}"
+echo ''
+echo 'BING ARRAY'
+echo "  maps_api_key: ${BING[maps_api_key]}"
+
+
+unset RECEIVER
+unset DUMP1090
+unset DUMP978
+unset HEYWHATSTHAT
+unset BING
 
 # STOPPING HERE FOR TESTING PURPOSES
 exit 0
 
 
-
-## ---------------
-## DUMP978 DIALOGS
-
-if [ "$DUMP978_INSTALLED" == 'false' ] ; then
-
-    # Dump978 has not been compiled.
-
-    INSTALL_DUMP978_TITLE='Install Dump978'
-    INSTALL_DUMP978_MESSAGE="Dump978 is a decoder for 978MHz UAT signals.\n\nDump978 can be install installed in conjunction with Dump1090 as long as two separate RTL-SDR dongles are present on this device. If you only have a single RTL-SDR dongle installing Dump978 along with Dump1090 is not possible.\n\nWhould you like to install Dump978?"
-    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$INSTALL_DUMP978_TITLE" --defaultno --yesno "$INSTALL_DUMP978_MESSAGE" 0 0
-    case $? in
-        0) INSTALL_DUMP978='true' ;;
-        1) INSTALL_DUMP978='false' ;;
-        255) exit 1 ;;
-    esac
-
-    if [ "$INSTALL_DUMP978" == 'true' ] ; then
-
-        # Ask which device should be assigned to Dump1090.
-        DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment'
-        DUMP1090_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump1090.'
-        while [ -z $DUMP1090_DEVICE_ID ] ; do
-            DUMP1090_DEVICE_ID='0'
-            DUMP1090_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_DEVICE_ID_TITLE" --inputbox "$DUMP1090_DEVICE_ID_MESSAGE" 0 0 "$DUMP1090_DEVICE_ID" --output-fd 1)
-            RESULT=$?
-            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-                exit 1
-            fi
-            DUMP1090_DEVICE_ID_TITLE='Dump1090 RTL-SDR Dongle Assignment [REQUIRED]'
-        done
-        # Ask which device should be assigned to Dump978.
-        DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment'
-        DUMP978_DEVICE_ID_MESSAGE='Please supply the ID of the RTL-SDR dongle which will be used by Dump978.'
-        while [ -z $DUMP978_DEVICE_ID ] ; do
-            DUMP978_DEVICE_ID='1'
-            DUMP978_DEVICE_ID=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DEVICE_ID_TITLE" --inputbox "$DUMP978_DEVICE_ID_MESSAGE" 0 0 "$DUMP978_DEVICE_ID" --output-fd 1)
-            RESULT=$?
-            if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-                exit 1
-            fi
-            DUMP978_DEVICE_ID_TITLE='Dump978 RTL-SDR Dongle Assignment [REQUIRED]'
-        done
-    fi
-else
-
-    # Dump978 has been compiled.
-
-    UPGRADE_DUMP978_TITLE='Update Dump978'
-    UPGRADE_DUMP978_MESSAGE="The source code for Dump978 rarely changes if at all. However, the local source code repository can be updated and the binaries recompiled if you wish to do so.\n\nWould you like to recompile the Dump978 binaries?" 0 0
-    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$UPGRADE_DUMP978_TITLE" --yesno "$UPGRADE_DUMP978_MESSAGE" 0 0
-    case $? in
-        0) UPGRADE_DUMP978='true' ;;
-        1) UPGRADE_DUMP978='false' ;;
-        255) exit 1 ;;
-    esac
-fi
 
 ## --------------
 ## FEEDER DIALOGS
