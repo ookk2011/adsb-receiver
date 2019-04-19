@@ -31,10 +31,6 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-## SOURCE EXTERNAL SCRIPTS
-
-source ${PROJECT_BASH_DIRECTORY}/functions.sh
-
 ## CHECK DUMP1090
 
 function dump1090_status() {
@@ -95,6 +91,5 @@ function dump978_status() {
         # It appears Dump978 has been compiled and since Dump978 is not versioned the upgrade option should be made available.
         DUMP978[installed]='true'
         DUMP978[upgradeable]='true'
-        DUMP978[device_id]=$(grep -n '/dump978' /etc/rc.local | grep -oP "(?<=-d ).*?(?= -f)")
     fi
 }

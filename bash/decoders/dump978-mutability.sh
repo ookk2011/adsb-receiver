@@ -35,8 +35,20 @@
 
 function dump978_dialogs() {
 
-    # TODO:
-    # GET SETTING FROM EXISTING INSTALLATIONS
+    if [ -f "${PROJECT_BUILD_DIRECTORY}/dump978/dump978" ] && [ -f "${PROJECT_BUILD_DIRECTORY}/dump978/uat2text" ] && [ -f "${PROJECT_BUILD_DIRECTORY}/dump978/uat2esnt" ] && [ -f "${PROJECT_BUILD_DIRECTORY}/dump978/uat2json" ] ; then
+
+        # Get the Dump1090 device setting from the Dump1090 configuration file.
+        case "${DUMP1090[fork]}" in
+            'dump1090-mutability') DUMP1090_DEVICE_ID=`GetConfig "DEVICE" "/etc/default/dump1090-mutability"` ;;
+            'dump1090-fa') DUMP1090_DEVICE_ID=`GetConfig "DEVICE" "/etc/default/dump1090-fa"` ;;
+            'dump1090-hptoa') DUMP1090_DEVICE_ID=`GetConfig "DEVICE" "/etc/default/dump1090-hptoa"` ;;
+        esac
+
+        # Get existing settings from the startup line in /etc/rc.local.
+        DUMP978_DEVICE_ID=$(grep -n '/dump978' /etc/rc.local | grep -oP "(?<=-d ).*?(?= -f)")
+        DUMP978_SAMPLERATE=$(grep -n '/dump978' /etc/rc.local | grep -oP "(?<=-s ).*?(?= -g)")
+        DUMP978_GAIN=$(grep -n '/dump978' /etc/rc.local | grep -oP "(?<=-g ).*?(?= -)")
+    fi
 
     # Begin displaying dialogs.
     if [ "${DUMP978[installed]}" == 'false' ] || [ "${DUMP978[upgradeable]}" == "true" ] ; then
@@ -44,12 +56,12 @@ function dump978_dialogs() {
 
             # This would be a clean installation of dump1090-mutability.
             DUMP978_DO_INSTALL_TITLE='Install dump978-mutability'
-            DUMP978_DO_INSTALL_MESSAGE=""
+            DUMP978_DO_INSTALL_MESSAGE="Dump978 is an experimental demodulator/decoder for 978MHz UAT signals. More information on Dump978 can be found at the following address.\n\nhttps://github.com/mutability/dump978"
         else
 
             # Dump1090-mutability is currently installed.
             DUMP978_DO_INSTALL_TITLE='Recompile and configure dump978-mutability.'
-            DUMP978_DO_INSTALL_MESSAGE=""
+            DUMP978_DO_INSTALL_MESSAGE="It appears that Dump978 has already been compiled on this device. Being Dump978 is not versioned it is impossible to tell if you are actually running the latest available code. By continuing your local Dump978 git source code repository will be updated and the binaries recompiled using the latest source code."
         fi
 
         dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_DO_INSTALL_TITLE" --yesno "$DUMP978_DO_INSTALL_MESSAGE" 0 0

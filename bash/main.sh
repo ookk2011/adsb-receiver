@@ -80,6 +80,9 @@ if [ "${DUMP1090[installed]}" == 'false' ] ; then
     fi
 fi
 
+# TODO:
+# Ask user if they wish to reinstall/reconfigure dump1090 if it is already installed.
+
 case ${DUMP1090[fork]} in
     'dump1090-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-mutability.sh ;;
     'dump1090-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-fa.sh ;;
@@ -96,29 +99,38 @@ dump978_status
 
 if [ "${DUMP978[installed]}" == 'false' ] ; then
 
-    # TODO:
     # Ask user if they wish to install dump978 if it is not already installed.
+    DUMP978_DO_INSTALL_TITLE="Install Dump978"
+    DUMP978_DO_INSTALL_MESSAGE="Dump978 is a demodulator/decoder for 978MHz UAT signals. In order to install and use Dump978 you will need to have two physical RTL-SDR USB dongles available. One for Dump1090 and the other for Dump978.\n\nWould you like to install dump978?"
+    dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "DUMP978_DO_INSTALL_MESSAGE" --defaultno --yesno "$DUMP978_DO_INSTALL_MESSAGE" 0 0
+    case $? in
+        0) DUMP978[do_install]='true' ;;
+        1) DUMP978[do_install]='false' ;;
+        255) exit 1 ;;
+    esac
 
-    # Have the user choose which Dump978 fork to install.
-    DUMP978_FORK_TITLE='Choose Dump978 Fork'
-    DUMP978_FORK_MESSAGE=""
-    DUMP978[fork]=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_FORK_TITLE" --radiolist "$DUMP978_FORK_MESSAGE" 0 0 0 \
-                    "dump978-mutability" "(Mutability)" off \
-                    "dump978-fa" "(FlightAware)" off  --output-fd 1)
-    RESULT=$?
-    if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
-        exit 1
+    if [ "${DUMP978[do_install]}" == 'true' ] ; then
+
+        # Have the user choose which Dump978 fork to install.
+        DUMP978_FORK_TITLE='Choose Dump978 Fork'
+        DUMP978_FORK_MESSAGE=""
+        DUMP978[fork]=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP978_FORK_TITLE" --radiolist "$DUMP978_FORK_MESSAGE" 0 0 0 \
+                        "dump978-mutability" "(Mutability)" off \
+                        "dump978-fa" "(FlightAware)" off  --output-fd 1)
+        RESULT=$?
+        if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
+            exit 1
+        fi
+
+        case ${DUMP978[fork]} in
+            'dump978-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump978-mutability.sh ;;
+            'dump978-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump978-fa.sh ;;
+        esac
+
+        # Display the proper Dump1090 setup dialogs.
+        dump978_dialogs
     fi
 fi
-
-case ${DUMP978[fork]} in
-    'dump978-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump978-mutability.sh ;;
-    'dump978-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump978-fa.sh ;;
-esac
-
-# Display the proper Dump1090 setup dialogs.
-dump978_dialogs
-
 
 # Display array contents during development.
 echo ''
@@ -132,7 +144,7 @@ echo "  installed: ${DUMP1090[installed]}"
 echo "  fork: ${DUMP1090[fork]}"
 echo "  upgradeable: ${DUMP1090[upgradeable]}"
 echo "  do_install: ${DUMP1090[do_install]}"
-echo "  device_id: ${DUMP978[device_id]}"
+echo "  device_id: ${DUMP1090[device_id]}"
 echo "  bind_all_ips: ${DUMP1090[bind_all_ips]}"
 echo "  max_range: ${DUMP1090[max_range]}"
 echo "  unit_of_measure: ${DUMP1090[unit_of_measurment]}"

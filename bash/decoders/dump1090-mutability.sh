@@ -70,6 +70,11 @@ function dump1090_dialogs() {
         esac
     fi
 
+    if [ "${DUMP1090[installed]}" == 'false' ] && [ "$DUMP1090_DO_INSTALL" == 'false' ] ; then
+        echo -e "${COLOR_RED}Dump1090 is required in order to continue installation.${COLOR_LIGHT_GRAY}"
+        exit 1
+    fi
+
     # Ask for receiver latitude.
     RECEIVER_LATITUDE_TITLE='Receiver Latitude'
     RECEIVER_LATITUDE_MESSAGE="Enter your receiver's latitude.\n(Example: XX.XXXXXXX)"
@@ -258,7 +263,7 @@ fi
 # Check that the dump1090-mutability package was built successfully.
 if [ ! -f dump1090-mutability_1.15~dev_*.deb ] ; then
     # If the dump1090-mutability package was not built.
-    echo "\n${COLOR_RED}The package dump1090-mutability was not built successfully.${COLOR_LIGHT_GRAY}"
+    echo -e "\n${COLOR_RED}The package dump1090-mutability was not built successfully.${COLOR_LIGHT_GRAY}"
     exit 1
 fi
 
@@ -271,7 +276,7 @@ echo ''
 echo -e "${COLOR_BLUE}Checking that the dump1090-mutability package was installed successfully...${COLOR_LIGHT_GRAY}"
 if [ $(dpkg-query -W -f='${STATUS}' dump1090-mutability 2>/dev/null | grep -c "ok installed") -eq 0 ] ; then
     # If the dump1090-mutability package could not be installed halt setup.
-    echo "\n${COLOR_RED}The package dump1090-mutability was not installed successfully.${COLOR_LIGHT_GRAY}"
+    echo -e "\n${COLOR_RED}The package dump1090-mutability was not installed successfully.${COLOR_LIGHT_GRAY}"
     exit 1
 fi
 
