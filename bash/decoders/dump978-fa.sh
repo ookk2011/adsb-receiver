@@ -54,13 +54,13 @@ function dump978_dialogs() {
     if [ "${DUMP978[installed]}" == 'false' ] || [ "${DUMP978[upgradeable]}" == "true" ] ; then
         if [ "${DUMP978[installed]}" == 'false' ] ; then
 
-            # This would be a clean installation of dump1090-mutability.
-            DUMP978_DO_INSTALL_TITLE='Install dump978-mutability'
-            DUMP978_DO_INSTALL_MESSAGE="Dump978 is an experimental demodulator/decoder for 978MHz UAT signals. More information on Dump978 can be found at the following address.\n\nhttps://github.com/mutability/dump978"
+            # This would be a clean installation of dump1090-fa.
+            DUMP978_DO_INSTALL_TITLE='Install dump978-fa'
+            DUMP978_DO_INSTALL_MESSAGE="Dump978 is an experimental demodulator/decoder for 978MHz UAT signals. More information on Dump978 can be found at the following address.\n\nhttps://github.com/flightaware/dump978"
         else
 
-            # Dump1090-mutability is currently installed.
-            DUMP978_DO_INSTALL_TITLE='Recompile and configure dump978-mutability.'
+            # Dump1090-fa is currently installed.
+            DUMP978_DO_INSTALL_TITLE='Recompile and configure dump978-fa.'
             DUMP978_DO_INSTALL_MESSAGE="It appears that Dump978 has already been compiled on this device. Being Dump978 is not versioned it is impossible to tell if you are actually running the latest available code. By continuing your local Dump978 git source code repository will be updated and the binaries recompiled using the latest source code."
         fi
 
