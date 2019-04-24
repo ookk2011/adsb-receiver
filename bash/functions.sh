@@ -89,6 +89,11 @@ function GetConfig {
     echo `sed -n "/^$1 *= *\"\(.*\)\"$/s//\1/p" $2`
 }
 
+# Remove color coding from the log to make it more reader friendly.
+function CleanLogFile {
+    # Use sed to remove any color sequences from the specified "FILE".
+    sed -i "s,\x1B\[[0-9;]*[a-zA-Z],,g" $1
+}
 
 
 
@@ -164,3 +169,9 @@ EOF
     fi
 }
 
+function CleanLogFile {
+    # Use sed to remove any color sequences from the specified "FILE".
+    sed -i "s,\x1B\[[0-9;]*[a-zA-Z],,g" $1
+    # Remove the "Press enter to continue..." lines from the log file.
+    sed -i "/Press enter to continue.../d" $1
+}

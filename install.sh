@@ -267,8 +267,7 @@ fi
 
 ## EXECUTE THE MAIN SETUP SCRIPT
 
-printf "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}"
-sleep 1
+echo -e "${COLOR_PURPLE}Starting the setup process.${COLOR_LIGHT_GRAY}\n"
 
 # Run main.sh.
 chmod +x ${PROJECT_BASH_DIRECTORY}/init.sh 2>&1 >/dev/null
@@ -277,7 +276,7 @@ if [ $? -ne 0 ] ; then
     FAILED='true'
 fi
 
-echo -e "\n${COLOR_PURPLE}Setup process complete.\n"
+echo -e "${COLOR_PURPLE}Setup process complete.\n"
 
 ## CLEAN UP
 
@@ -294,7 +293,7 @@ CleanLogFile $LOG_FILE
 echo -e "${COLOR_BLUE}Log file saved to ${PROJECT_ROOT_DIRECTORY}/logs/${LOG_FILE}."
 
 # Set the exit messages before unsetting the color variables.
-SETUP_COMPLETE_ERROR="\n${COLOR_RED}Setup halted due users choosing or errors.${COLOR_LIGHT_GRAY}\n"
+SETUP_COMPLETE_ERROR="\n${COLOR_RED}Setup halted due to users choosing or errors.${COLOR_LIGHT_GRAY}\n"
 SETUP_COMPLETE_SUCCESS="\n${COLOR_GREEN}Setup completed successfully.${COLOR_LIGHT_GRAY}\n"
 
 # Unset any variables exported by this script.

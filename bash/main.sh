@@ -47,9 +47,14 @@ export BING
 
 ## SOURCE EXTERNAL SCRIPTS
 
-source ${PROJECT_BASH_DIRECTORY}/checks.sh
+source ${PROJECT_BASH_DIRECTORY}/init.sh
 source ${PROJECT_BASH_DIRECTORY}/variables.sh
 source ${PROJECT_BASH_DIRECTORY}/functions.sh
+
+## INTIALIZE THE SETUP PROCESS
+
+echo -e "${COLOR_LIGHT_BLUE}Performing pre-installation checks.${COLOR_LIGHT_GRAY}\n"
+initalize
 
 ## WELCOME DIALOG
 
@@ -62,9 +67,7 @@ fi
 
 ## DUMP1090
 
-# Check the status of Dump1090.
-dump1090_status
-
+# If dump1090 is not installed ask the user which fork to install.
 if [ "${DUMP1090[installed]}" == 'false' ] ; then
 
     # Have the user choose which Dump1090 fork to install.
@@ -72,8 +75,7 @@ if [ "${DUMP1090[installed]}" == 'false' ] ; then
     DUMP1090_FORK_MESSAGE="Dump1090 is a Mode S decoder designed for RTL-SDR devices.\n\nOver time there have been multiple forks of the original. Some of the more popular and requested ones are available for installation using this setup process.\n\nPlease choose the fork which you wish to install."
     DUMP1090[fork]=$(dialog --keep-tite --backtitle "$PROJECT_TITLE" --title "$DUMP1090_FORK_TITLE" --radiolist "$DUMP1090_FORK_MESSAGE" 0 0 0 \
                     "dump1090-mutability" "(Mutability)" on \
-                    "dump1090-fa" "(FlightAware)" off \
-                    "dump1090-hptoa" "(OpenSky Network)" off --output-fd 1)
+                    "dump1090-fa" "(FlightAware)" off --output-fd 1)
     RESULT=$?
     if [ $RESULT -eq 255 ] || [ $RESULT -eq 1 ] ; then
         exit 1
@@ -86,7 +88,6 @@ fi
 case ${DUMP1090[fork]} in
     'dump1090-mutability') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-mutability.sh ;;
     'dump1090-fa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-fa.sh ;;
-    'dump1090-hptoa') source ${PROJECT_BASH_DIRECTORY}/decoders/dump1090-hptoa.sh ;;
 esac
 
 # Display the proper Dump1090 setup dialogs.
@@ -132,55 +133,7 @@ if [ "${DUMP978[installed]}" == 'false' ] ; then
     fi
 fi
 
-# Display array contents during development.
-echo ''
-echo ''
-echo 'RECEIVER ARRAY'
-echo "  latitude: ${RECEIVER[latitude]}"
-echo "  longitude: ${RECEIVER[longitude]}"
-echo ''
-echo 'DUMP1090 ARRAY'
-echo "  installed: ${DUMP1090[installed]}"
-echo "  fork: ${DUMP1090[fork]}"
-echo "  upgradeable: ${DUMP1090[upgradeable]}"
-echo "  do_install: ${DUMP1090[do_install]}"
-echo "  device_id: ${DUMP1090[device_id]}"
-echo "  bind_all_ips: ${DUMP1090[bind_all_ips]}"
-echo "  max_range: ${DUMP1090[max_range]}"
-echo "  unit_of_measure: ${DUMP1090[unit_of_measurment]}"
-echo ''
-echo 'DUMP978 ARRAY'
-echo "  installed: ${DUMP978[installed]}"
-echo "  fork: ${DUMP978[fork]}"
-echo "  upgradeable: ${DUMP978[upgradeable]}"
-echo "  do_install: ${DUMP978[do_install]}"
-echo "  device_id: ${DUMP978[device_id]}"
-echo "  samplerate: ${DUMP978[samplerate]}"
-echo "  gain: ${DUMP978[gain]}"
-echo ''
-echo 'HAYWHATSTHAT ARRAY'
-echo "  add: ${HEYWHATSTHAT[add]}"
-echo "  panarama_id: ${HEYWHATSTHAT[panarama_id]}"
-echo "  ring_one_altitude: ${HEYWHATSTHAT[ring_one_altitude]}"
-echo "  ring_two_altitude: ${HEYWHATSTHAT[ring_two_altitude]}"
-echo ''
-echo 'BING ARRAY'
-echo "  maps_api_key: ${BING[maps_api_key]}"
-
-
-unset RECEIVER
-unset DUMP1090
-unset DUMP978
-unset HEYWHATSTHAT
-unset BING
-
-# STOPPING HERE FOR TESTING PURPOSES
-exit 0
-
-
-
-## --------------
-## FEEDER DIALOGS
+## FEEDERS
 
 # Build an array containing feeder installation/upgrade options.
 declare array FEEDER_OPTIONS
@@ -263,6 +216,56 @@ else
         exit 1
     fi
 fi
+
+
+# Display array contents during development.
+echo ''
+echo ''
+echo "FEEDERS: $FEEDERS"
+echo ''
+echo 'RECEIVER ARRAY'
+echo "  latitude: ${RECEIVER[latitude]}"
+echo "  longitude: ${RECEIVER[longitude]}"
+echo ''
+echo 'DUMP1090 ARRAY'
+echo "  installed: ${DUMP1090[installed]}"
+echo "  fork: ${DUMP1090[fork]}"
+echo "  upgradeable: ${DUMP1090[upgradeable]}"
+echo "  do_install: ${DUMP1090[do_install]}"
+echo "  device_id: ${DUMP1090[device_id]}"
+echo "  bind_all_ips: ${DUMP1090[bind_all_ips]}"
+echo "  max_range: ${DUMP1090[max_range]}"
+echo "  unit_of_measure: ${DUMP1090[unit_of_measurment]}"
+echo ''
+echo 'DUMP978 ARRAY'
+echo "  installed: ${DUMP978[installed]}"
+echo "  fork: ${DUMP978[fork]}"
+echo "  upgradeable: ${DUMP978[upgradeable]}"
+echo "  do_install: ${DUMP978[do_install]}"
+echo "  device_id: ${DUMP978[device_id]}"
+echo "  samplerate: ${DUMP978[samplerate]}"
+echo "  gain: ${DUMP978[gain]}"
+echo ''
+echo 'HEYWHATSTHAT ARRAY'
+echo "  add: ${HEYWHATSTHAT[add]}"
+echo "  panarama_id: ${HEYWHATSTHAT[panarama_id]}"
+echo "  ring_one_altitude: ${HEYWHATSTHAT[ring_one_altitude]}"
+echo "  ring_two_altitude: ${HEYWHATSTHAT[ring_two_altitude]}"
+echo ''
+echo 'BING ARRAY'
+echo "  maps_api_key: ${BING[maps_api_key]}"
+
+
+unset RECEIVER
+unset DUMP1090
+unset DUMP978
+unset HEYWHATSTHAT
+unset BING
+
+# STOPPING HERE FOR TESTING PURPOSES
+exit 0
+
+
 
 ## PORTAL DIALOGS
 

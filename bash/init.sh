@@ -31,62 +31,76 @@
 #                                                                                   #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-## SOURCE EXTERNAL SCRIPTS
+function initalize() {
 
-source ${PROJECT_BASH_DIRECTORY}/functions.sh
+    ## DUMP1090
 
-## ---------------
-## DUMP1090 STATUS
+    DUMP1090[installed]='false'
+    SUPPORTED_DUMP1090_FORKS=('dump1090-mutability' 'dump1090-fa')
 
-SUPPORTED_DUMP1090_FORKS=('dump1090-mutability' 'dump1090-fa')
-
-# Determine if a Dump1090 fork is currently installed and if so which one it is.
-for FORK in "${SUPPORTED_DUMP1090_FORKS[@]}"
-do
-    if [ $(dpkg-query -W -f='${STATUS}' $FORK 2>/dev/null | grep -c 'ok installed') -eq 1 ] ; then
-        DUMP1090_INSTALLED='true'
-        DUMP1090_FORK=$FORK
-        break
-    fi
+    # Determine if a Dump1090 fork is currently installed and if so which one it is.
+    for FORK in "${SUPPORTED_DUMP1090_FORKS[@]}"
+    do
+        if [ $(dpkg-query -W -f='${STATUS}' $FORK 2>/dev/null | grep -c 'ok installed') -eq 1 ] ; then
+            DUMP1090[installed]='true'
+            DUMP1090[fork]=$FORK
+            break
+        fi
+    done
 
     # Dump1090 HPTOA does not install as a deb package so we need to check for it differently.
-    if [ "$DUMP1090_INSTALLED" == "false" ] ; then
+    if [ ${DUMP1090[installed]} == 'false' ] ; then
         if [ -f  ${PROJECT_BUILD_DIRECTORY}/dump1090-hptoa/dump1090-hptoa/build/dump1090 ] && [ -f ${PROJECT_BUILD_DIRECTORY}/dump1090-hptoa/dump1090-hptoa/build/faup1090 ] && [ -f ${PROJECT_BUILD_DIRECTORY}/dump1090-hptoa/dump1090-hptoa/build/view1090 ] && [ -f /etc/init.d/dump1090 ] ; then
-            DUMP1090_INSTALLED='true'
-            DUMP1090_FORK='dump1090-hptoa'
+            DUMP1090[installed]='true'
+            DUMP1090[fork]='dump1090-hptoa'
         fi
     fi
-done
 
-# If a Dump1090 fork is installed check if an upgrade is available.
-if [ "$DUMP1090_INSTALLED" == 'true' ] ; then
-    case $DUMP1090_FORK in
-        'dump1090-mutability'|'dump1090-hptoa')
+    # If a Dump1090 fork is installed check if an upgrade is available and gather existing variables.
+    if [ "${DUMP1090[installed]}" == 'true' ] ; then
+        case ${DUMP1090[fork]} in
+            'dump1090-mutability'|'dump1090-hptoa')
 
-            # Dump1090-Mutability
-            # -------------------
-            # Version 1.15~dev is the most current version and is still being maintained and continues to be updated however no new releases are being made.
-            # This being said there is no real way to tell if a new version is available so we will automatically set this package to be upgradeable.
+                # Dump1090-Mutability
+                # -------------------
+                # Version 1.15~dev is the most current version and is still being maintained and continues to be updated however no new releases are being made.
+                # This being said there is no real way to tell if a new version is available so we will automatically set this package to be upgradeable.
 
-            # Dump1090-HPTOA
-            # --------------
-            # Dump1090-hptoa is handled the same way being there have yet to be any real release made yet.
+                # Dump1090-HPTOA
+                # --------------
+                # Dump1090-hptoa is handled the same way being there have yet to be any real release made yet.
 
-            DUMP1090_UPGRADEABLE='true'
+                DUMP1090[upgradeable]='true'
 
-            # Assign variables which may be used during the installation process from the Dump1090 configuration if Dump1090 is installed.
-            DUMP1090_DEVICE_ID=$(GetConfig 'DEVICE' '/etc/default/dump1090-mutability')
-            RECEIVER_LATITUDE=$(GetConfig 'LAT' '/etc/default/dump1090-mutability')
-            RECEIVER_LONGITUDE=$(GetConfig 'LON' '/etc/default/dump1090-mutability')
-            ;;
-        'dump1090-fa')
-            # Check if a new version of dump1090-fa is available.
-            if [ $(sudo dpkg -s dump1090-fa 2>/dev/null | grep -c "Version: ${CURRENT_DUMP1090_FA_VERSION}") ] ; then
-                DUMP1090_UPGRADEABLE='true'
-            fi
-            ;;
-    esac
-fi
+                # Assign variables which may be used during the installation process from the Dump1090 configuration if Dump1090 is installed.
+                DUMP1090[device_id]=$(GetConfig 'DEVICE' '/etc/default/dump1090-mutability')
+                RECEIVER[latitude]=$(GetConfig 'LAT' '/etc/default/dump1090-mutability')
+                RECEIVER[longitude]=$(GetConfig 'LON' '/etc/default/dump1090-mutability')
+                DUMP1090[max_range]=$(GetConfig "MAX_RANGE" "/etc/default/dump1090-mutability")
+                BING[maps_api_key]=$(GetConfig "BingMapsAPIKey" "/usr/share/dump1090-mutability/html/config.js")
+                if [ -f /usr/share/dump1090-mutability/html/upintheair.json ] ; then
+                    HEYWHATSTHAT[ring_one_altitude]=$(cat /usr/share/dump1090-mutability/html/upintheair.json | jq -r '.rings[0].alt')
+                    HEYWHATSTHAT[ring_two_altitude]=$(cat /usr/share/dump1090-mutability/html/upintheair.json | jq -r '.rings[1].alt')
+                fi
+                ;;
+            'dump1090-fa')
+                # Check if a new version of dump1090-fa is available.
+                if [ $(sudo dpkg -s dump1090-fa 2>/dev/null | grep -c "Version: ${CURRENT_DUMP1090_FA_VERSION}") -eq 0 ] ; then
+                    DUMP1090[upgradeable]='true'
+
+                    # Assign variables which may be used during the installation process from the Dump1090 configuration if Dump1090 is installed.
+                    BING[maps_api_key]=$(GetConfig "BingMapsAPIKey" "/usr/share/dump1090-mutability/html/config.js")
+                    if [ -f /usr/share/dump1090-mutability/html/upintheair.json ] ; then
+                        HEYWHATSTHAT[ring_one_altitude]=$(cat /usr/share/dump1090-mutability/html/upintheair.json | jq -r '.rings[0].alt')
+                        HEYWHATSTHAT[ring_two_altitude]=$(cat /usr/share/dump1090-mutability/html/upintheair.json | jq -r '.rings[1].alt')
+                    fi
+                fi
+                ;;
+        esac
+    fi
+}
+
+function not_used_yet() {
 
 ## --------------
 ## DUMP978 STATUS
@@ -195,3 +209,5 @@ if [ $(dpkg-query -W -f='${STATUS}' pfclient 2>/dev/null | grep -c "ok installed
 fi
 
 ## PORTAL STATUS
+
+}
